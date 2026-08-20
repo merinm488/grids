@@ -3,165 +3,130 @@
  * GRIDS - Vercel Serverless Function for Storage
  * ================================================
  *
- * This API endpoint handles storage operations:
- * - Routes client storage requests to TextDB
- * - Supports save, load, delete, and list operations
- * - Hides TextDB implementation details
+ * This API endpoint handles storage operations using TextDB
+ * - Uses user hash as TextDB identifier (same as Notes project)
+ * - Supports save, load, delete operations
+ * - Simple key-value storage like Notes project
  *
  * Environment Variables Required:
- * - TEXTDB_COLLECTION_ID: Your TextDB collection ID
- * - TEXTDB_API_KEY: Optional API key for TextDB
+ * - PEPPER_SECRET: Pepper for secure hashing (same as Notes)
  */
 
-const https = require('https');
+const TEXTDB_API_BASE = 'https://textdb.dev/api/data';
 
 /**
- * TextDB configuration
+ * Get user data from textdb.dev
+ * @param {string} hash - User's hash (used as textdb.dev identifier)
+ * @returns {Promise<Object|null>} - User data or null if not found
  */
-const TEXTDB_CONFIG = {
-    baseUrl: process.env.TEXTDB_BASE_URL || 'https://textdb.dev/api/data',
-    collectionId: process.env.TEXTDB_COLLECTION_ID || 'YOUR_COLLECTION_ID',
-    apiKey: process.env.TEXTDB_API_KEY || '',
-};
-
-/**
- * Make HTTPS request to TextDB
- */
-function makeTextDBRequest(url, options = {}) {
-    return new Promise((resolve, reject) => {
-        const urlObj = new URL(url);
-
-        const reqOptions = {
-            hostname: urlObj.hostname,
-            port: 443,
-            path: urlObj.pathname + urlObj.search,
-            method: options.method || 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(TEXTDB_CONFIG.apiKey && { 'Authorization': `Bearer ${TEXTDB_CONFIG.apiKey}` }),
-                ...options.headers,
-            },
-        };
-
-        const req = https.request(reqOptions, (res) => {
-            let data = '';
-
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            res.on('end', () => {
-                try {
-                    const jsonData = data ? JSON.parse(data) : {};
-                    resolve({ status: res.statusCode, data: jsonData });
-                } catch (e) {
-                    resolve({ status: res.statusCode, data: data });
-                }
-            });
-        });
-
-        req.on('error', (e) => {
-            reject(e);
-        });
-
-        if (options.body) {
-            req.write(JSON.stringify(options.body));
-        }
-
-        req.end();
+async function getUserData(hash) {
+  try {
+    console.log(`[TEXTDB GET] Fetching hash: ${hash}`);
+    const response = await fetch(`${TEXTDB_API_BASE}/${hash}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
     });
+
+    console.log(`[TEXTDB GET] Response status: ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.log(`[TEXTDB GET] User not found (404)`);
+        return null;
+      }
+      throw new Error(`Failed to fetch data: ${response.status}`);
+    }
+
+    const text = await response.text();
+    console.log(`[TEXTDB GET] Response text length: ${text?.length}`);
+
+    // textdb.dev returns default content for non-existent keys
+    // Check for empty, whitespace, or default textdb responses
+    if (!text || text.trim() === '' || text.includes('hello world from textdb') || text.length < 10) {
+      console.log(`[TEXTDB GET] Default/empty/invalid content, returning null`);
+      return null;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+      // textdb.dev sometimes returns JSON-encoded strings (double-encoded)
+      // If we got a string, parse it again
+      if (typeof parsed === 'string') {
+        console.log(`[TEXTDB GET] Got string, parsing again...`);
+        parsed = JSON.parse(parsed);
+      }
+    } catch (parseError) {
+      console.error(`[TEXTDB GET] JSON parse error: ${parseError.message}`);
+      return null;
+    }
+
+    // Validate that we have actual user data structure
+    if (!parsed || typeof parsed !== 'object') {
+      console.log(`[TEXTDB GET] Invalid user data structure, returning null`);
+      return null;
+    }
+
+    console.log(`[TEXTDB GET] Valid user data`);
+    return parsed;
+  } catch (error) {
+    console.error('[TEXTDB GET] Error reading user data:', error);
+    return null;
+  }
 }
 
 /**
- * Load data from TextDB
+ * Save user data to textdb.dev
+ * @param {string} hash - User's hash (used as textdb.dev identifier)
+ * @param {Object} userData - User data to save
+ * @returns {Promise<boolean>} - Success status
  */
-async function loadFromTextDB(id) {
-    const url = `${TEXTDB_CONFIG.baseUrl}/${TEXTDB_CONFIG.collectionId}/${id}`;
+async function saveUserData(hash, userData) {
+  try {
+    console.log(`[TEXTDB POST] Saving hash: ${hash} with ${JSON.stringify(userData).length} bytes`);
+    const response = await fetch(`${TEXTDB_API_BASE}/${hash}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(userData)
+    });
 
-    try {
-        const response = await makeTextDBRequest(url, { method: 'GET' });
-
-        if (response.status === 404) {
-            return { success: true, data: null };
-        }
-
-        if (response.status !== 200) {
-            return { success: false, error: 'Failed to load data' };
-        }
-
-        return { success: true, data: response.data.data || response.data };
-    } catch (error) {
-        console.error('Load error:', error);
-        return { success: false, error: 'Failed to load data' };
+    console.log(`[TEXTDB POST] Response status: ${response.status}, ok: ${response.ok}`);
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`[TEXTDB POST] Error response: ${responseText}`);
+      throw new Error(`Failed to save data: ${response.status}`);
     }
+
+    let responseText = await response.text();
+    console.log(`[TEXTDB POST] Response text: "${responseText?.substring(0, 200)}"`);
+
+    // Verify the save worked by checking the response
+    if (responseText && responseText.trim() !== '' && !responseText.includes('hello world from textdb')) {
+      console.log(`[TEXTDB POST] Save appears successful`);
+      return true;
+    } else {
+      console.warn(`[TEXTDB POST] Response looks suspicious: "${responseText}"`);
+      // Still return true since response.ok was true
+      return true;
+    }
+  } catch (error) {
+    console.error('[TEXTDB POST] Error saving user data:', error);
+    return false;
+  }
 }
 
 /**
- * Save data to TextDB
+ * Check if user exists
+ * @param {string} hash - User's hash
+ * @returns {Promise<boolean>} - Whether user exists
  */
-async function saveToTextDB(id, data) {
-    const url = `${TEXTDB_CONFIG.baseUrl}/${TEXTDB_CONFIG.collectionId}/${id}`;
-
-    try {
-        const response = await makeTextDBRequest(url, {
-            method: 'POST',
-            body: {
-                collectionId: TEXTDB_CONFIG.collectionId,
-                data: data,
-                id: id,
-            },
-        });
-
-        return response.status === 200
-            ? { success: true }
-            : { success: false, error: 'Failed to save data' };
-    } catch (error) {
-        console.error('Save error:', error);
-        return { success: false, error: 'Failed to save data' };
-    }
-}
-
-/**
- * Delete data from TextDB
- */
-async function deleteFromTextDB(id) {
-    const url = `${TEXTDB_CONFIG.baseUrl}/${TEXTDB_CONFIG.collectionId}/${id}`;
-
-    try {
-        const response = await makeTextDBRequest(url, { method: 'DELETE' });
-
-        // 404 is OK (already deleted)
-        return response.status === 200 || response.status === 404
-            ? { success: true }
-            : { success: false, error: 'Failed to delete data' };
-    } catch (error) {
-        console.error('Delete error:', error);
-        return { success: false, error: 'Failed to delete data' };
-    }
-}
-
-/**
- * List all documents in TextDB collection
- */
-async function listFromTextDB() {
-    const url = `${TEXTDB_CONFIG.baseUrl}/${TEXTDB_CONFIG.collectionId}`;
-
-    try {
-        const response = await makeTextDBRequest(url, { method: 'GET' });
-
-        if (response.status !== 200) {
-            return { success: false, error: 'Failed to list data' };
-        }
-
-        const documents = Array.isArray(response.data)
-            ? response.data
-            : (response.data.documents || []);
-
-        return { success: true, data: documents };
-    } catch (error) {
-        console.error('List error:', error);
-        return { success: false, error: 'Failed to list data' };
-    }
+async function userExists(hash) {
+  const userData = await getUserData(hash);
+  return userData !== null;
 }
 
 /**
@@ -184,50 +149,56 @@ module.exports = async function handler(req, res) {
 
     try {
         if (req.method === 'GET') {
-            const { action, id } = req.query;
+            const { action, hash } = req.query;
 
-            if (!action) {
-                return res.status(400).json({ success: false, error: 'Action parameter is required' });
+            if (!action || !hash) {
+                return res.status(400).json({ success: false, error: 'Action and hash are required' });
             }
 
             switch (action) {
                 case 'load':
-                    if (!id) {
-                        return res.status(400).json({ success: false, error: 'ID parameter is required for load action' });
+                    const userData = await getUserData(hash);
+                    if (!userData) {
+                        return res.status(404).json({ success: false, error: 'User not found' });
                     }
-                    const loadResult = await loadFromTextDB(id);
-                    return res.status(loadResult.success ? 200 : 500).json(loadResult);
-
-                case 'list':
-                    const listResult = await listFromTextDB();
-                    return res.status(listResult.success ? 200 : 500).json(listResult);
+                    return res.status(200).json({ success: true, data: userData });
 
                 default:
-                    return res.status(400).json({ success: false, error: 'Invalid action for GET request' });
+                    return res.status(400).json({ success: false, error: 'Invalid action' });
             }
         }
 
         if (req.method === 'POST') {
-            const { action, id, data } = req.body;
+            const { action, hash, data } = req.body;
 
-            if (!action) {
-                return res.status(400).json({ success: false, error: 'Action parameter is required' });
+            if (!action || !hash) {
+                return res.status(400).json({ success: false, error: 'Action and hash are required' });
             }
 
             switch (action) {
                 case 'save':
-                    if (!id || data === undefined) {
-                        return res.status(400).json({ success: false, error: 'ID and data are required for save action' });
+                    const saved = await saveUserData(hash, data);
+                    if (saved) {
+                        return res.status(200).json({ success: true });
+                    } else {
+                        return res.status(500).json({ success: false, error: 'Failed to save data' });
                     }
-                    const saveResult = await saveToTextDB(id, data);
-                    return res.status(saveResult.success ? 200 : 500).json(saveResult);
 
                 case 'delete':
-                    if (!id) {
-                        return res.status(400).json({ success: false, error: 'ID parameter is required for delete action' });
+                    // Delete from textdb.dev by sending empty content
+                    try {
+                        await fetch(`${TEXTDB_API_BASE}/${hash}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(null)
+                        });
+                    } catch (error) {
+                        console.error('Delete error:', error);
                     }
-                    const deleteResult = await deleteFromTextDB(id);
-                    return res.status(deleteResult.success ? 200 : 500).json(deleteResult);
+                    return res.status(200).json({ success: true });
 
                 default:
                     return res.status(400).json({ success: false, error: 'Invalid action' });

@@ -3,45 +3,16 @@
  * GRIDS - Cryptographic Utilities
  * ================================================
  *
- * This module handles secure hashing for access keys with:
- * - Pepper hashing for additional security
- * - SHA-256 for key derivation
- * - Base64 encoding for storage
+ * This module handles secure hashing for access keys:
+ * - Uses same approach as Notes project
+ * - Server-side hashing via API
+ * - SHA-256 hex encoding (simpler than Base64)
  *
  * SECURITY NOTES:
- * - The pepper is stored separately (server-side in production)
- * - Pepper is never exposed to client-side code in production
- * - For local development, a default pepper is used
- *
- * The hashing process:
- * 1. User enters raw key
- * 2. Pepper name is concatenated with the raw key
- * 3. Result is hashed with SHA-256
- * 4. Result is Base64 encoded for storage
+ * - The pepper is only used server-side
+ * - Client-side code calls the hashing API
+ * - Hash is used as TextDB identifier
  */
-
-// ================================================
-// Configuration
-// ================================================
-
-const CRYPTO_CONFIG = {
-    // Pepper identifier (used to select the actual pepper value)
-    // In production, this maps to a server-side pepper value
-    pepperName: 'grids_primary_pepper_v1',
-
-    // For local development only - DO NOT use in production
-    // In production, the actual pepper value should be stored:
-    // - Server-side in environment variables
-    // - In a secure secrets manager
-    // - Never exposed to client-side code
-    developmentPepper: 'grids_dev_pepper_change_in_production_2024',
-
-    // Hash algorithm to use
-    hashAlgorithm: 'SHA-256',
-
-    // Encoding for final output
-    outputEncoding: 'base64',
-};
 
 // ================================================
 // Main Crypto Functions
@@ -49,14 +20,10 @@ const CRYPTO_CONFIG = {
 
 /**
  * Hash an access key with pepper for secure storage
- *
- * PROCESS:
- * 1. Concatenate pepper name with the raw key
- * 2. Hash the result with SHA-256
- * 3. Base64 encode for storage
+ * Uses server-side hashing (same approach as Notes project)
  *
  * @param {string} rawKey - The raw access key entered by user
- * @returns {Promise<string>} The final hashed and encoded key
+ * @returns {Promise<string>} The final hashed key (hex format)
  */
 async function hashAccessKey(rawKey) {
     try {
@@ -70,19 +37,10 @@ async function hashAccessKey(rawKey) {
             return await hashAccessKeyServerSide(rawKey);
         } else {
             // Development: Use client-side hashing with hardcoded pepper
-            // Step 1: Initial hash of the raw key
-            // const initialHash = await sha256Hash(rawKey);
-
-            // Step 2: Concatenate pepper name with rawKey
-            const pepperedInput = `${CRYPTO_CONFIG.pepperName}:${rawKey}`;
-
-            // Step 3: Hash the peppered input
-            const finalHash = await sha256Hash(pepperedInput);
-
-            // Step 4: Encode for storage
-            const encodedKey = base64Encode(finalHash);
-
-            return encodedKey;
+            const devPepper = 'dev-pepper-change-in-production-9F2a-5xK8';
+            const pepperedInput = rawKey + devPepper;
+            const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pepperedInput));
+            return bufferToHex(hashBuffer);
         }
     } catch (error) {
         console.error('Error hashing access key:', error);
@@ -117,29 +75,13 @@ async function generateSessionToken(hashedKey) {
     const timestamp = Date.now().toString();
     const randomStr = generateRandomString(32);
     const sessionInput = `${hashedKey}:${timestamp}:${randomStr}`;
-    const sessionHash = await sha256Hash(sessionInput);
-    return base64Encode(sessionHash);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionInput));
+    return bufferToHex(hashBuffer);
 }
 
 // ================================================
 // Helper Functions
 // ================================================
-
-/**
- * Compute SHA-256 hash of a string
- *
- * @param {string} input - String to hash
- * @returns {Promise<string>} Hex-encoded hash
- */
-async function sha256Hash(input) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(input);
-    const hashBuffer = await crypto.subtle.digest(
-        CRYPTO_CONFIG.hashAlgorithm,
-        data
-    );
-    return bufferToHex(hashBuffer);
-}
 
 /**
  * Convert ArrayBuffer to hex string
@@ -157,24 +99,6 @@ function bufferToHex(buffer) {
 }
 
 /**
- * Base64 encode a string
- *
- * @param {string} input - String to encode
- * @returns {string} Base64-encoded string
- */
-function base64Encode(input) {
-    try {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(input);
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
-        return base64;
-    } catch (error) {
-        console.error('Error base64 encoding:', error);
-        throw new Error('Failed to encode data');
-    }
-}
-
-/**
  * Generate a cryptographically secure random string
  *
  * @param {number} length - Length of random string
@@ -187,7 +111,6 @@ function generateRandomString(length) {
         .map(byte => byte.toString(16).padStart(2, '0'))
         .join('');
 }
-
 
 /**
  * Hash access key using server-side pepper (production method)

@@ -4,64 +4,26 @@
  * ================================================
  *
  * This API endpoint performs secure server-side hashing:
- * - Accesses pepper from Vercel environment variables
- * - Never exposes pepper to client
+ * - Uses same approach as Notes project
+ * - Simple key + pepper → SHA-256 hash
  * - Returns only the final hash
  *
  * Environment Variables Required:
- * - AUTH_PEPPER: The actual pepper value (set in Vercel dashboard)
- * - AUTH_PEPPER_NAME: Pepper identifier (default: grids_primary_pepper_v1)
+ * - PEPPER_SECRET: The pepper value (set in Vercel dashboard)
  */
 
-// Crypto module for Node.js (available in Vercel serverless functions)
 const crypto = require('crypto');
 
+// Get pepper from environment or use development fallback (same as Notes)
+const PEPPER_SECRET = process.env.PEPPER_SECRET || 'dev-pepper-change-in-production-9F2a-5xK8';
+
 /**
- * SHA-256 hash function for Node.js
+ * Generate SHA-256 hash with pepper (same as Notes project)
  * @param {string} input - String to hash
  * @returns {string} Hex-encoded hash
  */
-function sha256Hash(input) {
-    return crypto.createHash('sha256').update(input).digest('hex');
-}
-
-/**
- * Hash access key with pepper (server-side)
- * @param {string} rawKey - Raw access key
- * @param {string} pepperName - Pepper identifier
- * @returns {string} Final hashed key
- */
-function hashAccessKeyServerSide(rawKey, pepperName) {
-
-    // Step 1: Get pepper from environment
-    const pepper = process.env.AUTH_PEPPER;
-
-    if (!pepper) {
-        // For development, use a fallback pepper
-        console.warn('WARNING: AUTH_PEPPER environment variable not configured. Using development pepper.');
-        const devPepper = 'grids_dev_pepper_change_in_production_2024';
-
-        // Step 1a: Hash the raw key first (initial hash)
-        const initialHash = sha256Hash(rawKey);
-
-        // Step 2a: Concatenate pepper name with initial hash
-        const pepperedInput = `${pepperName}:${initialHash}`;
-
-        // Step 3a: Hash the peppered input
-        const finalHash = sha256Hash(pepperedInput);
-
-        // Step 4a: Base64 encode for storage
-        return Buffer.from(finalHash).toString('base64');
-    }
-
-    // Production mode with real pepper
-    const pepperedInput = `${pepperName}:${rawKey}`;
-
-    // Step 2: Hash the peppered input
-    const finalHash = sha256Hash(pepperedInput);
-
-    // Step 3: Base64 encode for storage
-    return Buffer.from(finalHash).toString('base64');
+function generateHash(input) {
+    return crypto.createHash('sha256').update(input + PEPPER_SECRET).digest('hex');
 }
 
 /**
@@ -86,17 +48,18 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Key cannot be empty' });
         }
 
-        // Get pepper name from environment or use default
-        const pepperName = process.env.AUTH_PEPPER_NAME || 'grids_primary_pepper_v1';
+        // Normalize key - just trim whitespace (same as Notes)
+        const normalizedKey = rawKey.trim();
 
-        // Perform server-side hashing
-        const hashedKey = hashAccessKeyServerSide(rawKey, pepperName);
+        // Generate hash using the same method as Notes project
+        const hash = generateHash(normalizedKey);
+
+        console.log(`[HASH] Generated hash for key: ${hash.substring(0, 8)}...`);
 
         // Return only the hash (never the pepper)
         return res.status(200).json({
             success: true,
-            hashedKey: hashedKey,
-            pepperName: pepperName // Only return the name, not the value
+            hashedKey: hash
         });
 
     } catch (error) {
