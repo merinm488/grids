@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Grids - Modern spreadsheet application with Excel-like features">
+    <title>Grids - Modern Spreadsheet</title>
+
+    <!-- Luckysheet CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Settings Menu -->
+    <div class="settings-menu-container">
+        <button id="settingsBtn" class="settings-btn" aria-label="Settings">
+            <span class="settings-icon">⚙️</span>
+        </button>
+        <div id="settingsDropdown" class="settings-dropdown">
+            <button class="settings-dropdown-item" id="themeToggleBtn">
+                <span class="item-icon">🌓</span>
+                <span class="item-text">Toggle Theme</span>
+                <span class="theme-indicator light" id="themeIndicator"></span>
+            </button>
+            <button class="settings-dropdown-item" id="viewKeyBtn">
+                <span class="item-icon">🔑</span>
+                <span class="item-text">View My Key</span>
+            </button>
+            <div class="settings-dropdown-divider"></div>
+            <button class="settings-dropdown-item" id="logoutBtn">
+                <span class="item-icon">🚪</span>
+                <span class="item-text">Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Spreadsheet Container -->
+    <div id="luckysheet" class="luckysheet-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading Grids...</p>
+    </div>
+
+    <!-- Key Info Modal -->
+    <div id="keyModal" class="key-modal">
+        <div class="key-modal-content">
+            <div class="key-modal-header">
+                <h3 class="key-modal-title">Account Information</h3>
+                <button class="key-modal-close" id="keyModalClose">&times;</button>
+            </div>
+            <div class="key-modal-body">
+                <div class="key-info-row">
+                    <span class="key-info-label">Username:</span>
+                    <span class="key-info-value" id="keyUsername">-</span>
+                </div>
+                <div class="key-info-row">
+                    <span class="key-info-label">Session Active:</span>
+                    <span class="key-info-value highlight" id="keySessionStatus">Yes</span>
+                </div>
+                <div class="key-info-row">
+                    <span class="key-info-label">Theme:</span>
+                    <span class="key-info-value" id="keyCurrentTheme">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Check Script -->
+    <script>
+        // Check if user is authenticated before loading the app
+        (function() {
+            const sessionData = localStorage.getItem('grids_sessions');
+            if (!sessionData) {
+                // No session found, redirect to login
+                window.location.href = '/auth.html';
+            } else {
+                try {
+                    const session = JSON.parse(sessionData);
+                    // Check if session is expired
+                    if (session.expiresAt && Date.now() >= session.expiresAt) {
+                        // Session expired, redirect to login
+                        localStorage.removeItem('grids_sessions');
+                        localStorage.removeItem('grids_current_user');
+                        window.location.href = '/auth.html';
+                    }
+                } catch (e) {
+                    // Invalid session data, redirect to login
+                    window.location.href = '/auth.html';
+                }
+            }
+        })();
+    </script>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="config/config.js"></script>
+    <script src="js/crypto-utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/themes.js"></script>
+    <script src="js/spreadsheet.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

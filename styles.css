@@ -1,0 +1,760 @@
+/* ================================================
+   GRIDS - Modern Spreadsheet Application
+   Global Styles & Theme Variables
+   ================================================ */
+
+:root {
+    /* Light Theme (Default) - White Primary + Green */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+    --accent-color: #22c55e;
+    --accent-hover: #16a34a;
+    --accent-light: #dcfce7;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --toolbar-bg: #ffffff;
+    --formula-bar-bg: #f8f9fa;
+    --cell-bg: #ffffff;
+    --cell-selected: rgba(34, 197, 94, 0.1);
+    --cell-border: #dee2e6;
+    --header-bg: #f8f9fa;
+    --header-text: #212529;
+    --tab-bg: #f8f9fa;
+    --tab-active: #ffffff;
+    --scrollbar-bg: #f1f1f1;
+    --scrollbar-thumb: #c1c1c1;
+}
+
+[data-theme="dark"] {
+    /* Dark Theme - Black Primary + Green */
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #2a2a2a;
+    --text-primary: #e5e5e5;
+    --text-secondary: #a3a3a3;
+    --border-color: #404040;
+    --accent-color: #22c55e;
+    --accent-hover: #16a34a;
+    --accent-light: #14532d;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --toolbar-bg: #1a1a1a;
+    --formula-bar-bg: #0a0a0a;
+    --cell-bg: #0a0a0a;
+    --cell-selected: rgba(34, 197, 94, 0.15);
+    --cell-border: #2a2a2a;
+    --header-bg: #1a1a1a;
+    --header-text: #e5e5e5;
+    --tab-bg: #1a1a1a;
+    --tab-active: #0a0a0a;
+    --scrollbar-bg: #1a1a1a;
+    --scrollbar-thumb: #404040;
+}
+
+/* ================================================
+   Base Styles
+   ================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ================================================
+   Settings Menu (Bottom Left)
+   ================================================ */
+
+.settings-menu-container {
+    position: fixed;
+    bottom: 16px;
+    left: 10px;
+    z-index: 99999;
+}
+
+.settings-btn {
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+    padding: 8px;
+}
+
+.settings-btn:hover {
+    background-color: var(--accent-light);
+    transform: scale(1.1);
+}
+
+.settings-btn:active {
+    transform: scale(0.95);
+}
+
+.settings-icon {
+    font-size: 24px;
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+}
+
+.settings-btn:hover .settings-icon {
+    color: var(--accent-color);
+}
+
+/* Settings Dropdown Menu */
+.settings-dropdown {
+    position: absolute;
+    bottom: 60px;
+    left: 0;
+    min-width: 200px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.settings-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.settings-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.settings-dropdown-item:hover {
+    background-color: var(--accent-light);
+    color: var(--accent-color);
+}
+
+.settings-dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.settings-dropdown-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.settings-dropdown-item .item-icon {
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+.settings-dropdown-item .item-text {
+    flex: 1;
+}
+
+.settings-dropdown-item .theme-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+}
+
+.settings-dropdown-item .theme-indicator.light {
+    background: linear-gradient(135deg, #ffffff 50%, #22c55e 50%);
+}
+
+.settings-dropdown-item .theme-indicator.dark {
+    background: linear-gradient(135deg, #0a0a0a 50%, #22c55e 50%);
+}
+
+/* Divider in dropdown */
+.settings-dropdown-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 4px 0;
+}
+
+/* Remove old logout buttons */
+.logout-btn {
+    display: none !important;
+}
+
+/* ================================================
+   Loading Overlay
+   ================================================ */
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    pointer-events: auto;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--bg-tertiary);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-overlay p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ================================================
+   Spreadsheet Container
+   ================================================ */
+
+.luckysheet-container {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+/* ================================================
+   Luckysheet Theme Overrides
+   ================================================ */
+
+/* Toolbar styling */
+.luckysheet-wa-editor,
+.luckysheet-toolbar-container {
+    background-color: var(--toolbar-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Formula bar */
+.luckysheet-wa-editor .formula-bar {
+    background-color: var(--formula-bar-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Sheet tabs */
+.luckysheet-sheets-item {
+    background-color: var(--tab-bg) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.luckysheet-sheets-item-active {
+    background-color: var(--tab-active) !important;
+    color: var(--accent-color) !important;
+    border-bottom-color: var(--accent-color) !important;
+}
+
+/* Cell selection */
+.luckysheet-cell-selected {
+    border: 2px solid var(--accent-color) !important;
+}
+
+.luckysheet-selection-copy {
+    border: 2px dashed var(--accent-color) !important;
+}
+
+/* Headers */
+.luckysheet-headers hints-cell {
+    background-color: var(--header-bg) !important;
+    color: var(--header-text) !important;
+    border: 1px solid var(--cell-border) !important;
+}
+
+/* Scrollbar */
+.luckysheet-scrollbar-element::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.luckysheet-scrollbar-element::-webkit-scrollbar-track {
+    background: var(--scrollbar-bg);
+}
+
+.luckysheet-scrollbar-element::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 5px;
+}
+
+.luckysheet-scrollbar-element::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+/* Context menu */
+.luckysheet-context-menu {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+}
+
+.luckysheet-context-menu-item {
+    color: var(--text-primary) !important;
+}
+
+.luckysheet-context-menu-item:hover {
+    background-color: var(--accent-light) !important;
+    color: var(--accent-color) !important;
+}
+
+/* Modal dialogs */
+.luckysheet-modal-dialog {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.luckysheet-modal-title,
+.luckysheet-modal-content {
+    color: var(--text-primary) !important;
+}
+
+/* Buttons */
+.luckysheet-toolbar-button,
+.luckysheet-toolbar-button-hover {
+    color: var(--text-primary) !important;
+}
+
+.luckysheet-toolbar-button:hover,
+.luckysheet-toolbar-button-hover:hover {
+    background-color: var(--accent-light) !important;
+    color: var(--accent-color) !important;
+}
+
+/* ================================================
+   Responsive Design
+   ================================================ */
+
+@media (max-width: 768px) {
+    .settings-menu-container {
+        bottom: 15px;
+        left: 15px;
+    }
+
+    .settings-btn {
+        width: 45px;
+        height: 45px;
+    }
+
+    .settings-icon {
+        font-size: 20px;
+    }
+
+    .settings-dropdown {
+        min-width: 180px;
+        bottom: 55px;
+    }
+
+    .settings-dropdown-item {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    /* Make spreadsheet more mobile-friendly */
+    .luckysheet-container {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .theme-toggle-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .theme-icon {
+        font-size: 18px;
+    }
+
+    .loading-overlay p {
+        font-size: 14px;
+    }
+}
+
+/* ================================================
+   Print Styles
+   ================================================ */
+
+@media print {
+    .theme-toggle-container {
+        display: none !important;
+    }
+
+    .loading-overlay {
+        display: none !important;
+    }
+}
+
+/* ================================================
+   Accessibility
+   ================================================ */
+
+/* Focus styles for keyboard navigation */
+.theme-toggle-btn:focus-visible {
+    outline: 3px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: #000000;
+    }
+
+    [data-theme="dark"] {
+        --border-color: #ffffff;
+    }
+}
+
+/* ================================================
+   Notifications
+   ================================================ */
+
+.notification {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    min-width: 300px;
+    max-width: 90%;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    z-index: 10001;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideUp 0.3s ease, fadeIn 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notification-hiding {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.notification-success {
+    background-color: var(--accent-light);
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+}
+
+.notification-error {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: 1px solid #dc2626;
+}
+
+.notification-info {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* Responsive Design
+   ================================================ */
+
+@media (max-width: 768px) {
+    .settings-menu-container {
+        bottom: 15px;
+        left: 15px;
+    }
+
+    .settings-btn {
+        width: 45px;
+        height: 45px;
+    }
+
+    .settings-icon {
+        font-size: 20px;
+    }
+
+    .settings-dropdown {
+        min-width: 180px;
+        bottom: 55px;
+    }
+
+    .settings-dropdown-item {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .key-modal-content {
+        max-width: 350px;
+        padding: 20px;
+    }
+
+    /* Make spreadsheet more mobile-friendly */
+    .luckysheet-container {
+        font-size: 14px;
+    }
+
+    .notification {
+        bottom: 20px;
+        min-width: 280px;
+        padding: 14px 20px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .settings-icon {
+        font-size: 18px;
+    }
+
+    .settings-dropdown {
+        min-width: 160px;
+    }
+
+    .key-modal-content {
+        max-width: 300px;
+        padding: 16px;
+    }
+
+    .loading-overlay p {
+        font-size: 14px;
+    }
+}
+
+/* ================================================
+   Print Styles
+   ================================================ */
+
+@media print {
+    .settings-menu-container {
+        display: none !important;
+    }
+
+    .loading-overlay {
+        display: none !important;
+    }
+
+    .key-modal {
+        display: none !important;
+    }
+}
+
+/* ================================================
+   Responsive Design
+   ================================================ */
+
+/* Dark mode adjustments for notifications */
+[data-theme="dark"] .notification-error {
+    background-color: rgba(220, 38, 38, 0.15);
+    color: #ef4444;
+}
+
+/* Icon positioning for notifications */
+.notification::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.notification-success::before {
+    background-color: var(--accent-color);
+}
+
+.notification-error::before {
+    background-color: #dc2626;
+}
+
+.notification-info::before {
+    background-color: var(--text-secondary);
+}
+
+/* ================================================
+   Key Info Modal
+   ================================================ */
+
+.key-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.key-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.key-modal-content {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 8px 24px var(--shadow-color);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.key-modal.active .key-modal-content {
+    transform: scale(1);
+}
+
+.key-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.key-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.key-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.key-modal-close:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.key-modal-body {
+    color: var(--text-primary);
+}
+
+.key-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.key-info-row:last-child {
+    border-bottom: none;
+}
+
+.key-info-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.key-info-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.key-info-value.highlight {
+    color: var(--accent-color);
+}
