@@ -150,10 +150,15 @@
         (function() {
             const userHash = sessionStorage.getItem('grids_user_hash');
             const userKey = sessionStorage.getItem('grids_user_key');
+            const urlParams = new URLSearchParams(window.location.search);
+            const spreadsheetId = urlParams.get('id');
 
             if (!userHash || !userKey) {
                 // No session found, redirect to login
                 window.location.href = '/auth.html';
+            } else if (!spreadsheetId) {
+                // Authenticated but no spreadsheet ID, redirect to home
+                window.location.href = '/home.html';
             }
             // Session will be verified by authManager.initialize()
         })();

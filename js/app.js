@@ -50,6 +50,13 @@ class GridsApp {
             this.spreadsheetId = this.getOrCreateSpreadsheetId();
             console.log('[APP] Spreadsheet ID from URL:', this.spreadsheetId);
 
+            // If no spreadsheet ID and user is authenticated, redirect to home
+            if (!this.spreadsheetId && window.authManager && window.authManager.isAuthenticated()) {
+                console.log('[APP] No spreadsheet ID, redirecting to home page');
+                window.location.href = '/home.html';
+                return false;
+            }
+
             // Set up event listeners
             this.setupEventListeners();
 
