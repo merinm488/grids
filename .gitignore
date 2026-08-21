@@ -52,3 +52,4 @@ build/
 # *.json
 # *.xlsx
 # *.csv
+.vercel

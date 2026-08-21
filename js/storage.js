@@ -1,13 +1,13 @@
 /**
  * ================================================
- * GRIDS - Storage Module
+ * GRIDS - Storage Module (Updated for Unified API)
  * ================================================
- * Handles data persistence with environment-aware storage:
- * - Local Storage for testing/development
- * - TextDB (https://textdb.dev/api/data/) for production
- * - Uses user hash as identifier (same as Notes project)
+ * Handles data persistence using the unified /api/users endpoint:
+ * - All storage operations go through the user API
+ * - Uses user hash from sessionStorage for identification
+ * - Spreadsheet data is stored within user data structure
  *
- * Updated to match Notes project approach
+ * Matches Notes project approach
  */
 
 // ================================================
@@ -16,10 +16,8 @@
 
 class GridsStorage {
     constructor() {
-        // Initialize storage based on environment
         this.isProduction = APP_CONFIG.isProduction;
-        this.storageType = this.isProduction ? 'textdb' : 'local';
-        this.baseUrl = APP_CONFIG.storage.textDB.baseUrl;
+        this.apiEndpoint = '/api/users';
     }
 
     // ================================================
@@ -27,250 +25,259 @@ class GridsStorage {
     // ================================================
 
     /**
-     * Save spreadsheet data
-     * @param {string} hash - User hash (used as TextDB identifier)
-     * @param {object} data - Spreadsheet data to save
+     * Get current user hash from sessionStorage
+     * @returns {string|null} User hash
+     */
+    getUserHash() {
+        return sessionStorage.getItem('grids_user_hash');
+    }
+
+    /**
+     * Save spreadsheet data for current user
+     * @param {string} spreadsheetId - Spreadsheet ID
+     * @param {object} spreadsheetData - Spreadsheet data to save
      * @returns {Promise<boolean>} Success status
      */
-    async saveSpreadsheet(hash, data) {
-        return this.isProduction ? this.saveToTextDB(hash, data) : this.saveToLocal(hash, data);
-    }
-
-    /**
-     * Load spreadsheet data
-     * @param {string} hash - User hash
-     * @returns {Promise<object>} Spreadsheet data
-     */
-    async loadSpreadsheet(hash) {
-        return (this.isProduction) ? this.loadFromTextDB(hash) : this.loadFromLocal(hash);
-    }
-
-    /**
-     * Delete spreadsheet data
-     * @param {string} hash - User hash
-     * @returns {Promise<boolean>} Success status
-     */
-    async deleteSpreadsheet(hash) {
-        return this.isProduction ? this.deleteFromTextDB(hash) : this.deleteFromLocal(hash);
-    }
-
-    /**
-     * List all spreadsheets (not applicable for user-specific storage)
-     * @returns {Promise<Array>} Empty array (user-specific storage)
-     */
-    async listSpreadsheets() {
-        // User-specific storage doesn't support listing other users' data
-        return [];
-    }
-
-    /**
-     * Save user settings
-     * @param {object} settings - User settings object
-     */
-    async saveSettings(settings) {
-        const settingsKey = 'grids_user_settings';
-        return this.isProduction ? await this.saveToTextDB(settingsKey, settings) : await this.saveToLocal(settingsKey, settings);
-    }
-
-    /**
-     * Load user settings
-     * @returns {Promise<object>} User settings
-     */
-    async loadSettings() {
-        const settingsKey = 'grids_user_settings';
-        return this.isProduction ? await this.loadFromTextDB(settingsKey) : this.loadFromLocal(settingsKey);
-    }
-
-    // ================================================
-    // Local Storage Methods (Development/Testing)
-    // ================================================
-
-    /**
-     * Save to local storage
-     * @param {string} hash - User hash
-     * @param {object} data - Data to save
-     * @returns {Promise<boolean>} Success status
-     */
-    async saveToLocal(hash, data) {
-        try {
-            const storageKey = `grids_data_${hash}`;
-            localStorage.setItem(storageKey, this.compressData(data));
-            return true;
-        } catch {
-            console.error('Error saving to local');
+    async saveSpreadsheet(spreadsheetId, spreadsheetData) {
+        const hash = this.getUserHash();
+        if (!hash) {
+            console.error('[STORAGE] No user hash found');
             return false;
         }
-    }
 
-    /**
-     * Load from local storage
-     * @param {string} hash - User hash
-     * @returns {Promise<object>} Loaded data
-     */
-    async loadFromLocal(hash) {
+        console.log('[STORAGE] Saving spreadsheet with ID:', spreadsheetId);
+        console.log('[STORAGE] Spreadsheet data ID:', spreadsheetData?.id);
+        console.log('[STORAGE] ID match:', spreadsheetId === spreadsheetData?.id);
+
+        // Add cache-busting to avoid service worker interference
+        const cacheBuster = `&_t=${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
         try {
-            const loadedData = localStorage.getItem(`grids_data_${hash}`);
-            if (loadedData == null) {
-                console.error('Key does not exist');
-                return null;
-            }
-            return this.decompressData(loadedData);
-        } catch (error) {
-            console.error('error loading from local storage:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Delete from local storage
-     * @param {string} hash - User hash
-     * @returns {Promise<boolean>} Success status
-     */
-    async deleteFromLocal(hash) {
-        try {
-            localStorage.removeItem(`grids_data_${hash}`);
-            return true;
-        } catch (e) {
-            console.error("Error delete data from local storage: ", e);
-            return false;
-        }
-    }
-
-    /**
-     * List all local spreadsheets
-     * @returns {Promise<Array>} Array of user hashes
-     */
-    async listLocal() {
-        let hashList = [];
-        const prefix = 'grids_data_';
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const localKey = localStorage.key(i);
-                if (localKey && localKey.startsWith(prefix)) {
-                    hashList.push(localKey.substring(prefix.length));
-                }
-            }
-            return hashList;
-        } catch (e) {
-            console.error("Error listing local spreadsheets:", e);
-            return hashList;
-        }
-    }
-
-    // ================================================
-    // TextDB Methods (Production)
-    // ================================================
-
-    /**
-     * Save to TextDB (same approach as Notes project)
-     * @param {string} hash - User hash (used as TextDB identifier)
-     * @param {object} data - Spreadsheet data to save
-     * @returns {Promise<boolean>} Success status
-     */
-    async saveToTextDB(hash, data) {
-        try {
-            const response = await fetch('/api/storage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch(`${this.apiEndpoint}?${new URLSearchParams({ _cacheBust: Date.now() })}`, {
+                method: 'PUT',
+                cache: 'no-store',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                },
                 body: JSON.stringify({
-                    'action': 'save',
-                    'hash': hash,
-                    'data': data
+                    hash: hash,
+                    action: 'updateSpreadsheet',
+                    data: {
+                        spreadsheetId: spreadsheetId,
+                        spreadsheetData: spreadsheetData,
+                        _timestamp: Date.now()
+                    }
                 })
             });
-            if (response.ok) {
-                return true;
-            } else {
-                console.error("Save Failed");
-                return false;
+
+            const result = await response.json();
+            console.log('[STORAGE] Save result:', result.success);
+            console.log('[STORAGE] Total spreadsheets after save:', result.data?.spreadsheets?.length);
+
+            // Verify the save worked correctly
+            if (result.success && result.data?.spreadsheets) {
+                const savedSpreadsheet = result.data.spreadsheets.find(s => s.id === spreadsheetId);
+                if (!savedSpreadsheet) {
+                    console.error('[STORAGE] Save reported success but spreadsheet not found in data!');
+                    return false;
+                }
+                console.log('[STORAGE] Verified spreadsheet saved:', savedSpreadsheet.name);
             }
-        } catch (e) {
-            console.error('Error:', e);
+
+            return result.success;
+        } catch (error) {
+            console.error('[STORAGE] Save error:', error);
             return false;
         }
     }
 
     /**
-     * Load from TextDB (same approach as Notes project)
-     * @param {string} hash - User hash to load
-     * @returns {Promise<object|null>} Loaded data or null if not found
+     * Load all user data (including spreadsheets)
+     * @returns {Promise<object|null>} User data with spreadsheets
      */
-    async loadFromTextDB(hash) {
+    async loadUserData() {
+        const hash = this.getUserHash();
+        if (!hash) {
+            console.error('[STORAGE] No user hash found');
+            return null;
+        }
+
         try {
-            const url = `/api/storage?action=load&hash=${hash}`;
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
+            // Add cache-busting timestamp to ensure fresh data
+            const cacheBuster = `&_t=${Date.now()}`;
+            const response = await fetch(`${this.apiEndpoint}?hash=${encodeURIComponent(hash)}${cacheBuster}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
             });
+
             if (response.ok) {
                 const result = await response.json();
-                return result.data;
+                console.log('[STORAGE] Loaded user data:', result);
+                return result.success ? result.data : null;
             } else {
-                console.error('Load Failed');
+                console.error('[STORAGE] Load failed:', response.status);
                 return null;
             }
-        } catch (e) {
-            console.error('Error:', e);
+        } catch (error) {
+            console.error('[STORAGE] Load error:', error);
             return null;
         }
     }
 
     /**
-     * Delete from TextDB
-     * @param {string} hash - User hash to delete
+     * Get specific spreadsheet from user data
+     * @param {string} spreadsheetId - Spreadsheet ID
+     * @returns {Promise<object|null>} Spreadsheet data
+     */
+    async getSpreadsheet(spreadsheetId) {
+        console.log('[STORAGE] Getting spreadsheet:', spreadsheetId);
+        const userData = await this.loadUserData();
+        console.log('[STORAGE] User data:', userData);
+
+        if (!userData || !userData.spreadsheets) {
+            console.error('[STORAGE] No user data or spreadsheets found');
+            return null;
+        }
+
+        const spreadsheet = userData.spreadsheets.find(s => s.id === spreadsheetId);
+        if (spreadsheet) {
+            console.log('[STORAGE] Found spreadsheet:', spreadsheet.name);
+        } else {
+            console.error('[STORAGE] Spreadsheet not found:', spreadsheetId);
+        }
+
+        return spreadsheet || null;
+    }
+
+    /**
+     * Get all spreadsheets for current user
+     * @returns {Promise<Array>} Array of spreadsheets
+     */
+    async getSpreadsheets() {
+        const userData = await this.loadUserData();
+        if (!userData || !userData.spreadsheets) {
+            return [];
+        }
+
+        return userData.spreadsheets;
+    }
+
+    /**
+     * Delete spreadsheet from user data
+     * @param {string} spreadsheetId - Spreadsheet ID to delete
      * @returns {Promise<boolean>} Success status
      */
-    async deleteFromTextDB(hash) {
+    async deleteSpreadsheet(spreadsheetId) {
+        const hash = this.getUserHash();
+        if (!hash) {
+            console.error('[STORAGE] No user hash found');
+            return false;
+        }
+
         try {
-            const response = await fetch('/api/storage', {
-                method: 'POST',
+            const response = await fetch(this.apiEndpoint, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'delete',
                     hash: hash,
+                    action: 'deleteSpreadsheet',
+                    data: {
+                        spreadsheetId: spreadsheetId
+                    }
                 })
             });
-            if (response.ok) {
-                return true;
-            } else {
-                console.error('Delete Failed');
-                return false;
-            }
-        } catch (e) {
-            console.error('Error:', e);
+
+            const result = await response.json();
+            return result.success;
+        } catch (error) {
+            console.error('[STORAGE] Delete error:', error);
             return false;
         }
     }
 
-    // ================================================
-    // Utility Methods
-    // ================================================
-
     /**
-     * Compress data before storage
-     * @param {object} data - Data to compress
-     * @returns {string} Compressed data
+     * Update user settings
+     * @param {object} settings - Settings object to update
+     * @returns {Promise<boolean>} Success status
      */
-    compressData(data) {
-        return JSON.stringify(data);
+    async saveSettings(settings) {
+        const hash = this.getUserHash();
+        if (!hash) {
+            console.error('[STORAGE] No user hash found');
+            return false;
+        }
+
+        try {
+            const response = await fetch(this.apiEndpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    hash: hash,
+                    action: 'updateSettings',
+                    data: {
+                        settings: settings
+                    }
+                })
+            });
+
+            const result = await response.json();
+            return result.success;
+        } catch (error) {
+            console.error('[STORAGE] Save settings error:', error);
+            return false;
+        }
     }
 
     /**
-     * Decompress data after loading
-     * @param {string} compressed - Compressed data
-     * @returns {object} Decompressed data
+     * Get user settings from user data
+     * @returns {Promise<object>} User settings
      */
-    decompressData(compressed) {
-        return JSON.parse(compressed);
+    async getSettings() {
+        const userData = await this.loadUserData();
+        if (!userData || !userData.settings) {
+            // Return default settings
+            return {
+                theme: 'light'
+            };
+        }
+
+        return userData.settings;
+    }
+
+    // ================================================
+    // Legacy Methods (for backward compatibility)
+    // ================================================
+
+    /**
+     * Legacy method - uses new API
+     * @deprecated Use saveSpreadsheet with spreadsheet ID instead
+     */
+    async saveSpreadsheetByHash(hash, data) {
+        console.warn('[STORAGE] saveSpreadsheetByHash is deprecated, use saveSpreadsheet instead');
+        // This would need a spreadsheet ID, using hash as fallback
+        return this.saveSpreadsheet(hash, data);
     }
 
     /**
-     * Validate data structure
-     * @param {object} data - Data to validate
-     * @returns {boolean} Validation result
+     * Legacy method - uses new API
+     * @deprecated Use loadUserData instead
      */
-    validateData(data) {
-        return (typeof (data) === 'object') && data != null;
+    async loadSpreadsheet(hash) {
+        console.warn('[STORAGE] loadSpreadsheet is deprecated, use loadUserData instead');
+        return this.loadUserData();
+    }
+
+    /**
+     * Legacy method - uses new API
+     * @deprecated Use getSpreadsheets instead
+     */
+    async listSpreadsheets() {
+        return this.getSpreadsheets();
     }
 }
 
@@ -280,3 +287,9 @@ class GridsStorage {
 
 // Initialize global storage instance
 const gridsStorage = new GridsStorage();
+
+// Export for use in other modules
+if (typeof window !== 'undefined') {
+    window.GridsStorage = GridsStorage;
+    window.gridsStorage = gridsStorage;
+}

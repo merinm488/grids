@@ -27,6 +27,7 @@ class SpreadsheetManager {
         this.currentSheetId = null;
         this.options = null;
         this.isInitialized = false;
+        this.currentSpreadsheetMetadata = null; // Cache spreadsheet metadata
     }
 
     // ================================================
@@ -46,18 +47,63 @@ class SpreadsheetManager {
         // Initialize Luckysheet with luckysheet.create()
         // Set up event listeners
         // Mark as initialized
+        console.log('[SPREADSHEET] Starting initialization with data:', initialData);
+
         let containerElement = document.getElementById(APP_CONFIG.spreadsheet.container);
         if (containerElement === null){
+            console.error('[SPREADSHEET] Container element not found:', APP_CONFIG.spreadsheet.container);
+            this.showError('Spreadsheet container not found');
             return false;
         }
+
+        console.log('[SPREADSHEET] Container element found:', containerElement);
         this.container = containerElement;
         this.showLoading();
-        let options = this.buildOptions(initialData);
-        luckysheet.create(options);
+
+        // Store data BEFORE creating Luckysheet
         this.data = initialData || this.createDefaultData();
-        this.isInitialized = true;
-        this.hideLoading();
-        return true;
+        console.log('[SPREADSHEET] Using data:', this.data);
+
+        let options = this.buildOptions(this.data);
+        console.log('[SPREADSHEET] Built options:', options);
+
+        try {
+            console.log('[SPREADSHEET] Calling luckysheet.create...');
+            luckysheet.create(options);
+
+            // Wait a bit for Luckysheet to render
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            this.isInitialized = true;
+            console.log('[SPREADSHEET] Luckysheet initialization complete');
+            this.hideLoading();
+            return true;
+        } catch (error) {
+            console.error('[SPREADSHEET] Luckysheet initialization error:', error);
+            this.hideLoading();
+            this.showError('Failed to initialize spreadsheet. Please refresh the page.');
+            return false;
+        }
+    }
+
+    /**
+     * Show error message to user
+     * @param {string} message - Error message
+     */
+    showError(message) {
+        const container = document.getElementById(APP_CONFIG.spreadsheet.container);
+        if (container) {
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: var(--text-primary); text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                    <h2 style="margin-bottom: 10px;">Spreadsheet Error</h2>
+                    <p style="margin-bottom: 20px; color: var(--text-secondary);">${message}</p>
+                    <button onclick="location.reload()" style="padding: 10px 20px; background: var(--accent-color); color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        Refresh Page
+                    </button>
+                </div>
+            `;
+        }
     }
 
     /**
@@ -99,9 +145,20 @@ class SpreadsheetManager {
      * @returns {object} Default spreadsheet data
      */
     createDefaultData() {
+        console.log('[SPREADSHEET] Creating default data');
         // Create default sheet with sample data
         // Include: sheet name, row/column count, cell data
-        return [{name: 'Sheet1', row: APP_CONFIG.spreadsheet.default.row, column: APP_CONFIG.spreadsheet.default.column, celldata: []}];
+        const defaultSheet = {
+            name: 'Sheet1',
+            row: APP_CONFIG.spreadsheet.default.row,
+            column: APP_CONFIG.spreadsheet.default.column,
+            celldata: [],
+            // Add required Luckysheet properties
+            luckysheet_select_save: [{ row: [0, 1], column: [0, 1] }],
+            luckysheet_selection_range: []
+        };
+        console.log('[SPREADSHEET] Default sheet created:', defaultSheet);
+        return [defaultSheet];
     }
 
     // ================================================
@@ -118,18 +175,39 @@ class SpreadsheetManager {
         // Validate data structure
         // Update Luckysheet with new data
         // Handle multiple sheets
+        console.log('[SPREADSHEET] loadData called with:', data);
+
         if(!this.validateData(data)){
-            console.error('Invalid Data');
+            console.error('[SPREADSHEET] Invalid data structure:', data);
             return false;
         }
-        if(!this.isInitialized){
-            this.initialize(data);
-            return true;
-        } else {
-            luckysheet.destroy();
-            this.isInitialized = false;
-            this.initialize(data);
-            return true;
+
+        try {
+            if(!this.isInitialized){
+                console.log('[SPREADSHEET] First initialization with data');
+                const success = await this.initialize(data);
+                if (!success) {
+                    console.error('[SPREADSHEET] Failed to initialize');
+                    return false;
+                }
+                return true;
+            } else {
+                console.log('[SPREADSHEET] Reinitializing with new data');
+                luckysheet.destroy();
+                this.isInitialized = false;
+                // Wait for destruction to complete
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const success = await this.initialize(data);
+                if (!success) {
+                    console.error('[SPREADSHEET] Failed to reinitialize');
+                    return false;
+                }
+                return true;
+            }
+        } catch (error) {
+            console.error('[SPREADSHEET] Error in loadData:', error);
+            this.hideLoading();
+            return false;
         }
     }
 
@@ -159,43 +237,126 @@ class SpreadsheetManager {
     }
 
     /**
+     * Get cached spreadsheet metadata
+     * @returns {object|null} Spreadsheet metadata or null
+     */
+    getMetadata() {
+        return this.currentSpreadsheetMetadata;
+    }
+
+    /**
      * Save spreadsheet data
-     * Save current state to storage
+     * Save current state to storage using cached metadata
      * @returns {Promise<boolean>} Success status
      */
     async save() {
         // Get current data
-        // Use gridsStorage.saveSpreadsheet()
-        // Handle save confirmation
-        const currentData = this.getData();
-        if(!currentData){
-            console.error("Error saving the sheet");
+        console.log('[SPREADSHEET] Saving spreadsheet...');
+        console.log('[SPREADSHEET] Current sheet ID:', this.currentSheetId);
+        const currentSheetData = this.getData();
+        if(!currentSheetData || !this.currentSheetId){
+            console.error('[SPREADSHEET] Error saving - no data or sheet ID');
             return false;
         }
-        await gridsStorage.saveSpreadsheet(this.currentSheetId,currentData);
-        return true;
+
+        // Use cached metadata instead of fetching from API
+        const existingSpreadsheet = this.currentSpreadsheetMetadata || {
+            name: 'Untitled Spreadsheet',
+            createdAt: new Date().toISOString()
+        };
+
+        // Build complete spreadsheet object with metadata
+        // IMPORTANT: Ensure the id matches exactly what we're saving to
+        const spreadsheetData = {
+            id: this.currentSheetId, // Use the currentSheetId as the definitive ID
+            name: existingSpreadsheet.name || 'Untitled Spreadsheet',
+            data: currentSheetData,
+            createdAt: existingSpreadsheet.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        console.log('[SPREADSHEET] Saving spreadsheet with ID:', spreadsheetData.id);
+        console.log('[SPREADSHEET] Complete spreadsheet object:', spreadsheetData);
+        const success = await gridsStorage.saveSpreadsheet(this.currentSheetId, spreadsheetData);
+
+        // Update cached metadata
+        if (success) {
+            this.currentSpreadsheetMetadata = spreadsheetData;
+            console.log('[SPREADSHEET] Successfully saved and cached metadata');
+        }
+
+        console.log('[SPREADSHEET] Save result:', success);
+        return success;
     }
 
     /**
      * Load spreadsheet from storage
-     * Load data from storage
+     * Load data from storage and cache metadata
      * @param {string} id - Spreadsheet ID
      * @returns {Promise<boolean>} Success status
      */
     async load(id) {
-        // Use gridsStorage.loadSpreadsheet()
-        // Load data into Luckysheet
-       this.showLoading();
-       let data = await gridsStorage.loadSpreadsheet(id);
-       if(!data){
-        this.hideLoading();
-        return false;
-       }
-       await this.loadData(data);
-       this.currentSheetId = id;
-       this.data = data;
-       this.hideLoading();
-       return true;
+        this.showLoading();
+        console.log('[SPREADSHEET] Loading spreadsheet with ID:', id);
+
+        try {
+            // Set currentSheetId immediately to ensure consistency
+            this.currentSheetId = id;
+            console.log('[SPREADSHEET] Set currentSheetId to:', this.currentSheetId);
+
+            // Get specific spreadsheet from user data
+            let spreadsheetData = await gridsStorage.getSpreadsheet(id);
+
+            if(!spreadsheetData){
+                console.error('[SPREADSHEET] No spreadsheet data found for ID:', id);
+                this.currentSheetId = null; // Reset since load failed
+                this.hideLoading();
+                return false;
+            }
+
+            console.log('[SPREADSHEET] Retrieved spreadsheet data:', spreadsheetData);
+
+            // Cache the metadata (id, name, dates) to avoid refetching
+            this.currentSpreadsheetMetadata = {
+                id: spreadsheetData.id,
+                name: spreadsheetData.name,
+                createdAt: spreadsheetData.createdAt,
+                updatedAt: spreadsheetData.updatedAt
+            };
+
+            // Extract the actual spreadsheet data from the stored object
+            let data = spreadsheetData.data || spreadsheetData;
+            console.log('[SPREADSHEET] Extracted data:', data);
+
+            // If data is an array (multiple sheets), use it directly
+            let sheetData = Array.isArray(data) ? data : (data.data || data);
+            console.log('[SPREADSHEET] Final sheet data:', sheetData);
+
+            if (!sheetData || sheetData.length === 0) {
+                console.error('[SPREADSHEET] Invalid or empty sheet data');
+                this.currentSheetId = null; // Reset since load failed
+                this.hideLoading();
+                return false;
+            }
+
+            const loadSuccess = await this.loadData(sheetData);
+            if (!loadSuccess) {
+                console.error('[SPREADSHEET] Failed to load data into Luckysheet');
+                this.currentSheetId = null; // Reset since load failed
+                this.hideLoading();
+                return false;
+            }
+
+            this.data = sheetData;
+            this.hideLoading();
+            console.log('[SPREADSHEET] Successfully loaded spreadsheet. currentSheetId:', this.currentSheetId);
+            return true;
+        } catch (error) {
+            console.error('[SPREADSHEET] Load error:', error);
+            this.currentSheetId = null; // Reset since load failed
+            this.hideLoading();
+            return false;
+        }
     }
 
     // ================================================
@@ -650,14 +811,26 @@ class SpreadsheetManager {
      */
     validateData(data) {
         // Check required fields and structure
-        if (!data || !Array.isArray(data) || data.length === 0)
+        console.log('[SPREADSHEET] Validating data:', data);
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            console.error('[SPREADSHEET] Data is not a valid array');
             return false;
-        for (let sheet of data){
-            if (!sheet.name || typeof sheet.name  !== 'string')
-                return false;
-            if(!sheet.celldata || !Array.isArray(sheet.celldata))
-                return false;
         }
+
+        for (let sheet of data){
+            if (!sheet.name || typeof sheet.name  !== 'string') {
+                console.error('[SPREADSHEET] Sheet missing name or invalid:', sheet);
+                return false;
+            }
+            // celldata can be undefined or should be an array
+            if (sheet.celldata !== undefined && !Array.isArray(sheet.celldata)) {
+                console.error('[SPREADSHEET] Sheet celldata is not an array:', sheet);
+                return false;
+            }
+        }
+
+        console.log('[SPREADSHEET] Data validation passed');
         return true;
     }
 
@@ -731,9 +904,11 @@ class SpreadsheetManager {
      * Display loading overlay
      */
     showLoading() {
-        // Show loading overlay element
         const loadingOverlay = document.getElementById('loadingOverlay');
-        loadingOverlay.style.display = 'flex';
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.classList.remove('hidden');
+        }
     }
 
     /**
@@ -741,10 +916,28 @@ class SpreadsheetManager {
      * Hide loading overlay
      */
     hideLoading() {
-        // Hide loading overlay element
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
             loadingOverlay.style.display = 'none';
+            loadingOverlay.classList.add('hidden');
+            loadingOverlay.style.opacity = '0';
+            loadingOverlay.style.pointerEvents = 'none';
+            console.log('[SPREADSHEET] Loading overlay hidden');
+        }
+    }
+
+    /**
+     * Show loading state
+     * Display loading overlay
+     */
+    showLoading() {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.pointerEvents = 'auto';
+            console.log('[SPREADSHEET] Loading overlay shown');
         }
     }
 
@@ -759,6 +952,65 @@ class SpreadsheetManager {
         this.isInitialized = false;
         this.container = null;
         this.data = null;
+    }
+
+    /**
+     * Get current spreadsheet data
+     * @returns {object|null} Current spreadsheet data
+     */
+    async getCurrentSpreadsheetData() {
+        try {
+            if (!this.currentSheetId) return null;
+
+            // Load from storage
+            const userData = await gridsStorage.loadUserData();
+            if (!userData || !userData.spreadsheets) return null;
+
+            const spreadsheet = userData.spreadsheets.find(s => s.id === this.currentSheetId);
+            return spreadsheet || null;
+        } catch (error) {
+            console.error('[SPREADSHEET] Error getting spreadsheet data:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Save spreadsheet metadata
+     * @param {object} metadata - Spreadsheet metadata with updated name/date
+     * @returns {Promise<boolean>} Success status
+     */
+    async saveSpreadsheetMetadata(metadata) {
+        try {
+            if (!metadata.id) return false;
+
+            // Load current user data
+            const userData = await gridsStorage.loadUserData();
+            if (!userData || !userData.spreadsheets) return false;
+
+            // Find and update the spreadsheet
+            const index = userData.spreadsheets.findIndex(s => s.id === metadata.id);
+            if (index === -1) return false;
+
+            // Update metadata while preserving the spreadsheet data
+            const updatedSpreadsheet = {
+                ...userData.spreadsheets[index],
+                name: metadata.name,
+                updatedAt: metadata.updatedAt
+            };
+
+            // Save to storage using the existing saveSpreadsheet method
+            const success = await gridsStorage.saveSpreadsheet(metadata.id, updatedSpreadsheet);
+
+            if (success) {
+                this.currentSpreadsheetMetadata = metadata;
+                console.log('[SPREADSHEET] Metadata saved successfully');
+            }
+
+            return success;
+        } catch (error) {
+            console.error('[SPREADSHEET] Error saving metadata:', error);
+            return false;
+        }
     }
 }
 

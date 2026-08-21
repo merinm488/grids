@@ -4,42 +4,42 @@
    ================================================ */
 
 :root {
-    /* Light Theme (Default) - White Primary + Green */
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --bg-tertiary: #e9ecef;
-    --text-primary: #212529;
-    --text-secondary: #6c757d;
-    --border-color: #dee2e6;
+    /* Light Theme (Default) - Professional Palette */
+    --bg-primary: #fafafa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e5e5e5;
+    --text-primary: #1a1a1a;
+    --text-secondary: #737373;
+    --border-color: #e5e5e5;
     --accent-color: #22c55e;
     --accent-hover: #16a34a;
     --accent-light: #dcfce7;
-    --shadow-color: rgba(0, 0, 0, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.08);
     --toolbar-bg: #ffffff;
-    --formula-bar-bg: #f8f9fa;
+    --formula-bar-bg: #fafafa;
     --cell-bg: #ffffff;
     --cell-selected: rgba(34, 197, 94, 0.1);
-    --cell-border: #dee2e6;
-    --header-bg: #f8f9fa;
-    --header-text: #212529;
-    --tab-bg: #f8f9fa;
+    --cell-border: #e5e5e5;
+    --header-bg: #ffffff;
+    --header-text: #1a1a1a;
+    --tab-bg: #f5f5f5;
     --tab-active: #ffffff;
     --scrollbar-bg: #f1f1f1;
-    --scrollbar-thumb: #c1c1c1;
+    --scrollbar-thumb: #d4d4d4;
 }
 
 [data-theme="dark"] {
-    /* Dark Theme - Black Primary + Green */
+    /* Dark Theme - Professional Palette */
     --bg-primary: #0a0a0a;
     --bg-secondary: #1a1a1a;
     --bg-tertiary: #2a2a2a;
     --text-primary: #e5e5e5;
-    --text-secondary: #a3a3a3;
-    --border-color: #404040;
+    --text-secondary: #737373;
+    --border-color: #2a2a2a;
     --accent-color: #22c55e;
     --accent-hover: #16a34a;
     --accent-light: #14532d;
-    --shadow-color: rgba(0, 0, 0, 0.3);
+    --shadow-color: rgba(0, 0, 0, 0.25);
     --toolbar-bg: #1a1a1a;
     --formula-bar-bg: #0a0a0a;
     --cell-bg: #0a0a0a;
@@ -66,63 +66,54 @@
 html, body {
     width: 100%;
     height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     overflow: hidden;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Professional Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--accent-color);
+}
+
+/* Hide scrollbar by default, show on hover/scroll */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+*:hover {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 /* ================================================
-   Settings Menu (Bottom Left)
+   Settings Dropdown Menu
    ================================================ */
 
-.settings-menu-container {
-    position: fixed;
-    bottom: 16px;
-    left: 10px;
-    z-index: 99999;
-}
-
-.settings-btn {
-    width: auto;
-    height: auto;
-    border-radius: 8px;
-    border: none;
-    background-color: transparent;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    position: relative;
-    padding: 8px;
-}
-
-.settings-btn:hover {
-    background-color: var(--accent-light);
-    transform: scale(1.1);
-}
-
-.settings-btn:active {
-    transform: scale(0.95);
-}
-
-.settings-icon {
-    font-size: 24px;
-    color: var(--text-primary);
-    transition: color 0.3s ease;
-}
-
-.settings-btn:hover .settings-icon {
-    color: var(--accent-color);
-}
-
-/* Settings Dropdown Menu */
 .settings-dropdown {
     position: absolute;
-    bottom: 60px;
-    left: 0;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
     min-width: 200px;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -130,15 +121,18 @@ html, body {
     box-shadow: 0 4px 12px var(--shadow-color);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
+    transform: translateY(-10px);
     transition: all 0.3s ease;
-    overflow: hidden;
+    overflow: visible;
+    z-index: 99999;
+    pointer-events: none;
 }
 
 .settings-dropdown.active {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
+    pointer-events: auto;
 }
 
 .settings-dropdown-item {
@@ -154,7 +148,8 @@ html, body {
     width: 100%;
     text-align: left;
     font-size: 14px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 500;
 }
 
 .settings-dropdown-item:hover {
@@ -171,9 +166,15 @@ html, body {
 }
 
 .settings-dropdown-item .item-icon {
-    font-size: 18px;
-    width: 20px;
-    text-align: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+}
+
+.settings-dropdown-item:hover .item-icon {
+    color: var(--accent-color);
 }
 
 .settings-dropdown-item .item-text {
@@ -205,6 +206,131 @@ html, body {
 /* Remove old logout buttons */
 .logout-btn {
     display: none !important;
+}
+
+/* ================================================
+   Theme Submenu
+   ================================================ */
+
+.theme-dropdown-container {
+    position: relative;
+}
+
+.dropdown-arrow {
+    width: 16px;
+    height: 16px;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.settings-dropdown-item:hover .dropdown-arrow {
+    color: var(--accent-color);
+}
+
+.theme-submenu {
+    position: absolute;
+    top: 0;
+    right: 100%;
+    margin-right: 4px;
+    min-width: 140px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(10px);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    z-index: 100000;
+    pointer-events: none;
+}
+
+.theme-submenu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.theme-submenu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.theme-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    color: #1a1a1a;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    width: 100%;
+    text-align: left;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .theme-option {
+    color: #e5e5e5;
+}
+
+.theme-option:hover {
+    background-color: #dcfce7;
+    color: var(--accent-color);
+}
+
+[data-theme="dark"] .theme-option:hover {
+    background-color: #14532d;
+    color: var(--accent-color);
+}
+
+.theme-option.active {
+    background-color: #dcfce7;
+    color: var(--accent-color);
+}
+
+[data-theme="dark"] .theme-option.active {
+    background-color: #14532d;
+    color: var(--accent-color);
+}
+
+.theme-option.active::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-color);
+}
+
+.theme-option-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: #737373;
+    transition: color 0.3s ease;
+}
+
+[data-theme="dark"] .theme-option-icon {
+    color: #737373;
+}
+
+.theme-option:hover .theme-option-icon {
+    color: var(--accent-color);
+}
+
+.theme-option.active .theme-option-icon {
+    color: var(--accent-color);
 }
 
 /* ================================================
@@ -261,13 +387,124 @@ html, body {
 }
 
 /* ================================================
+   Top Navigation Bar
+   ================================================ */
+
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 9999;
+    box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.top-nav-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.top-nav-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.spreadsheet-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0 12px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.spreadsheet-title:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.spreadsheet-title-input {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--accent-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 0 0 0 12px;
+    text-align: left;
+    flex: 1;
+    min-width: 0;
+    outline: none;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: -0.01em;
+}
+
+.spreadsheet-title-input:focus {
+    border-color: var(--accent-color);
+}
+
+.top-nav-btn {
+    background: transparent;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.top-nav-btn:hover {
+    background-color: var(--accent-light);
+}
+
+.top-nav-btn:active {
+    transform: scale(0.95);
+}
+
+.top-nav-icon {
+    color: var(--text-primary);
+    transition: color 0.2s ease;
+}
+
+.top-nav-btn:hover .top-nav-icon,
+.top-nav-btn:hover .back-icon {
+    color: var(--accent-color);
+}
+
+.top-nav-settings {
+    position: relative;
+}
+
+/* ================================================
    Spreadsheet Container
    ================================================ */
 
 .luckysheet-container {
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 44px);
     position: relative;
+    margin-top: 44px;
 }
 
 /* ================================================
@@ -279,6 +516,82 @@ html, body {
 .luckysheet-toolbar-container {
     background-color: var(--toolbar-bg) !important;
     border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Toolbar buttons and icons */
+.luckysheet-toolbar-button,
+.luckysheet-toolbar-menu-button,
+.luckysheet-toolbar-select {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+}
+
+/* Font size input and number displays */
+.luckysheet-toolbar-select-input,
+.luckysheet-toolbar-select-fontsize,
+.luckysheet-toolbar-select-val,
+input.luckysheet-toolbar-select-input {
+    color: var(--text-primary) !important;
+    background-color: var(--bg-secondary) !important;
+}
+
+/* Number inputs in toolbar */
+input[type="number"],
+input[type="text"] {
+    color: var(--text-primary) !important;
+    background-color: var(--bg-secondary) !important;
+}
+
+.luckysheet-toolbar-button:hover,
+.luckysheet-toolbar-menu-button:hover,
+.luckysheet-toolbar-select:hover {
+    color: var(--accent-color) !important;
+    background-color: var(--accent-light) !important;
+}
+
+/* Toolbar dropdown menus */
+.luckysheet-toolbar-menu-button-select {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Font dropdown and other selects */
+.luckysheet-toolbar-select-transform,
+.luckysheet-toolbar-select-wrap {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Dropdown arrow icons */
+.luckysheet-toolbar-menu-button .fa-caret-down,
+.luckysheet-toolbar-select .fa-caret-down {
+    color: var(--text-primary) !important;
+}
+
+/* Dropdown menu items */
+.luckysheet-toolbar-menu-btn-set,
+.luckysheet-toolbar-menu-btn-item {
+    color: var(--text-primary) !important;
+    background-color: var(--bg-secondary) !important;
+}
+
+.luckysheet-toolbar-menu-btn-set:hover,
+.luckysheet-toolbar-menu-btn-item:hover {
+    background-color: var(--accent-light) !important;
+    color: var(--accent-color) !important;
+}
+
+/* Icon containers in toolbar */
+.luckysheet-toolbar-paint,
+.luckysheet-toolbar-menu-button-paint {
+    background-color: transparent !important;
+}
+
+/* Toolbar separators */
+.luckysheet-toolbar-line {
+    background-color: var(--border-color) !important;
 }
 
 /* Formula bar */
@@ -301,9 +614,68 @@ html, body {
     border-bottom-color: var(--accent-color) !important;
 }
 
-/* Cell selection */
-.luckysheet-cell-selected {
+/* Cell selection - green border only, no background */
+.luckysheet-cell-selected,
+.luckysheet-cell-selected:focus,
+.luckysheet-selection-highlight,
+.luckysheet-selection-copy {
     border: 2px solid var(--accent-color) !important;
+    background-color: transparent !important;
+    background: none !important;
+}
+
+/* Remove blue background from cell selection area - comprehensive */
+.luckysheet-selection-range,
+.luckysheet-select-range,
+.luckysheet-cell-range,
+.luckysheet-selection-range-hc,
+.luckysheet-selection-range-bg {
+    background-color: transparent !important;
+    background: none !important;
+}
+
+/* Active cell highlight - remove all backgrounds */
+.luckysheet-active-cell,
+.luckysheet-cell-focus,
+.luckysheet-cell-selected-current {
+    border: 2px solid var(--accent-color) !important;
+    background-color: transparent !important;
+    background: none !important;
+}
+
+/* Target the specific overlay elements Luckysheet uses */
+.luckysheet-selection-highlight-none,
+.luckysheet-selection-highlight-top,
+.luckysheet-selection-highlight-bottom,
+.luckysheet-selection-highlight-left,
+.luckysheet-selection-highlight-right {
+    background-color: transparent !important;
+}
+
+/* Remove fill/hatch patterns from selection */
+.luckysheet-selection-copy-hc,
+.luckysheet-selection-copy-bg {
+    background: none !important;
+    background-color: transparent !important;
+}
+
+/* Main spreadsheet area */
+.luckysheet-grid-area,
+.luckysheet-grid-container,
+.luckysheet-cells-area {
+    background-color: var(--cell-bg) !important;
+}
+
+/* Individual cells */
+.luckysheet-cell {
+    background-color: var(--cell-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Cell content */
+.luckysheet-cell span,
+.luckysheet-cell div {
+    color: var(--text-primary) !important;
 }
 
 .luckysheet-selection-copy {
@@ -373,6 +745,116 @@ html, body {
 .luckysheet-toolbar-button-hover:hover {
     background-color: var(--accent-light) !important;
     color: var(--accent-color) !important;
+}
+
+/* ================================================
+   Luckysheet Dark Mode Fixes
+   ================================================ */
+
+/* Cell editor input - always black text for visibility */
+.luckysheet-cell-input,
+.luckysheet-input-box,
+.luckysheet-cell-input textarea,
+.luckysheet-rich-text-editor,
+.luckysheet-selection-format {
+    color: #000000 !important;
+}
+
+/* Statistic bar - make text visible in dark mode */
+.luckysheet-statistic-bar,
+.luckysheet-wa-editor .luckysheet-statistic-bar,
+.luckysheet-info-bar,
+.luckysheet-wa-calculate-bar {
+    background-color: var(--bg-secondary) !important;
+    color: #000000 !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+/* Statistic bar text elements */
+.luckysheet-statistic-bar span,
+.luckysheet-statistic-bar div,
+.luckysheet-wa-calculate-bar span,
+.luckysheet-wa-calculate-bar div,
+.luckysheet-info-bar span,
+.luckysheet-info-bar div {
+    color: #000000 !important;
+}
+
+/* Formula bar / cell reference input (top-left) - always visible */
+.luckysheet-wa-editor input,
+.luckysheet-formula-input,
+.luckysheet-formula-bar-text,
+.luckysheet-wa-editor .luckysheet-formula-input,
+#luckysheet-formula-input-range,
+.luckysheet-info-detail,
+.luckysheet-info-detail-input,
+.luckysheet-cell-info,
+.luckysheet-cell-reference,
+.luckysheet-wa-editor .luckysheet-wa-editor {
+    background-color: var(--bg-secondary) !important;
+    color: #000000 !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Formula bar container - dark mode override */
+[data-theme="dark"] .luckysheet-wa-editor,
+[data-theme="dark"] .luckysheet-wa-calculate-bottom,
+[data-theme="dark"] .luckysheet-wa-calculate-top,
+[data-theme="dark"] .luckysheet-formula-bar {
+    background-color: var(--bg-secondary) !important;
+}
+
+/* Formula bar elements in dark mode - ensure dark background */
+[data-theme="dark"] .luckysheet-wa-editor input,
+[data-theme="dark"] .luckysheet-formula-input,
+[data-theme="dark"] input[type="text"].luckysheet-formula-input {
+    background-color: var(--bg-secondary) !important;
+    color: #e5e5e5 !important;
+}
+
+/* Statistic bar in dark mode - ensure proper colors */
+[data-theme="dark"] .luckysheet-statistic-bar,
+[data-theme="dark"] .luckysheet-wa-calculate-bar,
+[data-theme="dark"] .luckysheet-info-bar {
+    background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .luckysheet-statistic-bar span,
+[data-theme="dark"] .luckysheet-statistic-bar div,
+[data-theme="dark"] .luckysheet-wa-calculate-bar span,
+[data-theme="dark"] .luckysheet-wa-calculate-bar div,
+[data-theme="dark"] .luckysheet-info-bar span,
+[data-theme="dark"] .luckysheet-info-bar div {
+    color: #e5e5e5 !important;
+}
+
+/* Row/column headers (A1, B22 etc.) - make visible in dark mode */
+.luckysheet-headers,
+.luckysheet-thead-cell,
+.luckysheet-thead-cell-th,
+.luckysheet-thead-cell-wa,
+.luckysheet-row-header,
+.luckysheet-column-header,
+.luckysheet-rows-h,
+.luckysheet-cols-h,
+.luckysheet-cell-header.row-h,
+.luckysheet-cell-header.col-h,
+.luckysheet-rows-h span,
+.luckysheet-cols-h span,
+.luckysheet-thead-cell span,
+.luckysheet-thead-cell-th span {
+    background-color: var(--header-bg) !important;
+    color: #000000 !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Cell hover - not black, use accent highlight */
+.luckysheet-cell-hover {
+    background-color: rgba(34, 197, 94, 0.08) !important;
+}
+
+[data-theme="dark"] .luckysheet-cell-hover {
+    background-color: rgba(34, 197, 94, 0.12) !important;
 }
 
 /* ================================================
@@ -491,8 +973,9 @@ html, body {
     display: flex;
     align-items: center;
     gap: 12px;
-    animation: slideUp 0.3s ease, fadeIn 0.3s ease;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1), fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .notification-hiding {
@@ -672,7 +1155,12 @@ html, body {
     z-index: 10001;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Adjust modal background for dark theme */
+[data-theme="dark"] .key-modal {
+    background-color: rgba(0, 0, 0, 0.7);
 }
 
 .key-modal.active {
@@ -689,7 +1177,14 @@ html, body {
     width: 90%;
     box-shadow: 0 8px 24px var(--shadow-color);
     transform: scale(0.9);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ensure dark theme colors apply properly */
+[data-theme="dark"] .key-modal-content {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    box-shadow: 0 8px 24px var(--shadow-color);
 }
 
 .key-modal.active .key-modal-content {
@@ -707,6 +1202,13 @@ html, body {
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: -0.01em;
+}
+
+/* Ensure title color reflects theme */
+[data-theme="dark"] .key-modal-title {
+    color: var(--text-primary);
 }
 
 .key-modal-close {
@@ -721,8 +1223,8 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s ease;
+    border-radius: 6px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .key-modal-close:hover {
@@ -734,27 +1236,115 @@ html, body {
     color: var(--text-primary);
 }
 
-.key-info-row {
+.key-display-container {
+    margin-bottom: 20px;
+}
+
+.key-display {
     display: flex;
-    justify-content: space-between;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    gap: 8px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
 }
 
-.key-info-row:last-child {
-    border-bottom: none;
+/* Ensure dark theme colors apply properly */
+[data-theme="dark"] .key-display {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
 }
 
-.key-info-label {
+.key-text {
+    flex: 1;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+    word-break: break-all;
+    letter-spacing: -0.01em;
     font-weight: 500;
+    text-align: center;
+}
+
+.key-copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.key-copy-btn:hover {
+    background-color: var(--accent-light);
+    color: var(--accent-color);
+}
+
+.key-copy-btn:active {
+    transform: scale(0.95);
+}
+
+/* Ensure copy button reflects theme */
+[data-theme="dark"] .key-copy-btn {
     color: var(--text-secondary);
 }
 
-.key-info-value {
-    font-weight: 600;
-    color: var(--text-primary);
+[data-theme="dark"] .key-copy-btn:hover {
+    background-color: var(--accent-light);
+    color: var(--accent-color);
 }
 
-.key-info-value.highlight {
+.key-copy-feedback {
+    font-size: 13px;
+    color: var(--accent-color);
+    text-align: center;
+    min-height: 18px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    font-weight: 500;
+    margin: 0;
+}
+
+.key-copy-feedback.visible {
+    opacity: 1;
+}
+
+.key-modal-close-btn {
+    width: 100%;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.key-modal-close-btn:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+/* Ensure dark theme colors apply properly */
+[data-theme="dark"] .key-modal-close-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .key-modal-close-btn:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
     color: var(--accent-color);
 }

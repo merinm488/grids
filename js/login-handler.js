@@ -150,10 +150,8 @@ class LoginHandler {
         // Store the user data
         // This is already handled by authManager
 
-        // Redirect to main app after delay
-        setTimeout(() => {
-            window.location.href = '/index.html';
-        }, 500);
+        // Redirect to home page immediately
+        window.location.href = '/home.html';
     }
 
     /**
@@ -240,10 +238,8 @@ class LoginHandler {
             const user = window.authManager.getCurrentUser();
             console.log('User already authenticated:', user);
 
-            // Auto-redirect after brief delay
-            setTimeout(() => {
-                window.location.href = '/index.html';
-            }, 500);
+            // Auto-redirect immediately
+            window.location.href = '/home.html';
         }
     }
 

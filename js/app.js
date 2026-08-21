@@ -35,8 +35,7 @@ class GridsApp {
      */
     async init() {
         try {
-            // Set up loading state
-            this.showLoadingState();
+            console.log('[APP] Starting initialization...');
 
             // Initialize theme manager
             themeManager.init();
@@ -49,21 +48,7 @@ class GridsApp {
 
             // Get or create spreadsheet ID
             this.spreadsheetId = this.getOrCreateSpreadsheetId();
-
-            // Initialize spreadsheet
-            if (this.spreadsheetId && await this.load(this.spreadsheetId)) {
-                // Successfully loaded existing spreadsheet
-            } else {
-                // Create new spreadsheet
-                const newId = await this.createNew();
-                if (newId) {
-                    this.spreadsheetId = newId;
-                    this.updateURL(newId);
-                } else {
-                    this.showError('Failed to create spreadsheet');
-                    return false;
-                }
-            }
+            console.log('[APP] Spreadsheet ID from URL:', this.spreadsheetId);
 
             // Set up event listeners
             this.setupEventListeners();
@@ -73,15 +58,42 @@ class GridsApp {
                 this.setupAutoSave();
             }
 
-            // Hide loading state
-            this.hideLoadingState();
+            // Check if Luckysheet is available
+            if (typeof luckysheet === 'undefined') {
+                console.error('[APP] Luckysheet not loaded');
+                this.showError('Spreadsheet library failed to load. Please refresh the page.');
+                return false;
+            }
+
+            // Initialize spreadsheet
+            if (this.spreadsheetId && await this.load(this.spreadsheetId)) {
+                // Successfully loaded existing spreadsheet
+                console.log('[APP] Successfully loaded existing spreadsheet:', this.spreadsheetId);
+                console.log('[APP] spreadsheetManager.currentSheetId:', spreadsheetManager.currentSheetId);
+                // Use cached metadata instead of fetching
+                const metadata = spreadsheetManager.getMetadata();
+                this.updateSpreadsheetTitle(metadata?.name);
+            } else {
+                console.log('[APP] No valid spreadsheet ID or load failed, creating new spreadsheet');
+                // Create new spreadsheet
+                const newId = await this.createNew();
+                if (newId) {
+                    this.spreadsheetId = newId;
+                    this.updateURL(newId);
+                    console.log('[APP] Created and initialized new spreadsheet with ID:', newId);
+                } else {
+                    this.showError('Failed to create spreadsheet');
+                    return false;
+                }
+            }
 
             this.isInitialized = true;
+            console.log('[APP] Initialization complete. Final spreadsheetId:', this.spreadsheetId);
+            console.log('[APP] Final spreadsheetManager.currentSheetId:', spreadsheetManager.currentSheetId);
             return true;
         } catch (error) {
-            console.error('Application initialization error:', error);
+            console.error('[APP] Application initialization error:', error);
             this.showError('Failed to initialize application');
-            this.hideLoadingState();
             return false;
         }
     }
@@ -93,6 +105,9 @@ class GridsApp {
     setupEventListeners() {
         // Settings menu toggle
         this.setupSettingsMenu();
+
+        // Editable title
+        this.setupEditableTitle();
 
         // Keyboard shortcuts
         this.setupKeyboardShortcuts();
@@ -112,8 +127,17 @@ class GridsApp {
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsDropdown = document.getElementById('settingsDropdown');
         const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeSubmenu = document.getElementById('themeSubmenu');
         const viewKeyBtn = document.getElementById('viewKeyBtn');
         const logoutBtn = document.getElementById('logoutBtn');
+        const homeBtn = document.getElementById('homeBtn');
+
+        // Home button - navigate back to home page
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                window.location.href = '/home.html';
+            });
+        }
 
         // Toggle settings dropdown
         if (settingsBtn && settingsDropdown) {
@@ -125,20 +149,46 @@ class GridsApp {
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (settingsDropdown && !e.target.closest('.settings-menu-container')) {
+            // Only close settings dropdown if not clicking within it
+            if (settingsDropdown && !e.target.closest('.top-nav-settings')) {
                 settingsDropdown.classList.remove('active');
+                // Also close theme submenu when closing settings
+                if (themeSubmenu) {
+                    themeSubmenu.classList.remove('active');
+                }
+            }
+            // Close theme submenu if clicking outside it but still in settings
+            if (themeSubmenu && !e.target.closest('.theme-dropdown-container')) {
+                themeSubmenu.classList.remove('active');
             }
         });
 
-        // Theme toggle
-        if (themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', () => {
-                this.toggleTheme();
-                if (settingsDropdown) {
-                    settingsDropdown.classList.remove('active');
+        // Theme toggle - show submenu
+        if (themeToggleBtn && themeSubmenu) {
+            themeToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Toggle the submenu
+                const isActive = themeSubmenu.classList.contains('active');
+                if (isActive) {
+                    themeSubmenu.classList.remove('active');
+                } else {
+                    themeSubmenu.classList.add('active');
                 }
             });
         }
+
+        // Theme option selection
+        const themeOptions = document.querySelectorAll('.theme-option');
+        themeOptions.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const theme = option.getAttribute('data-theme');
+                this.setThemeFromOption(theme);
+                if (themeSubmenu) {
+                    themeSubmenu.classList.remove('active');
+                }
+            });
+        });
 
         // View key button
         if (viewKeyBtn) {
@@ -210,6 +260,116 @@ class GridsApp {
         });
     }
 
+    /**
+     * Setup editable title functionality
+     * Allow clicking on title to rename spreadsheet
+     */
+    setupEditableTitle() {
+        const titleElement = document.getElementById('spreadsheetTitle');
+        if (!titleElement) return;
+
+        titleElement.addEventListener('click', () => {
+            this.makeTitleEditable();
+        });
+    }
+
+    /**
+     * Make title editable
+     * Replace title with input field
+     */
+    makeTitleEditable() {
+        const titleElement = document.getElementById('spreadsheetTitle');
+        if (!titleElement) return;
+
+        const currentTitle = titleElement.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'spreadsheet-title-input';
+        input.value = currentTitle;
+
+        // Replace title with input
+        titleElement.parentNode.replaceChild(input, titleElement);
+        input.focus();
+        input.select();
+
+        // Handle save on blur and enter
+        const saveNewTitle = async () => {
+            const newTitle = input.value.trim() || 'Untitled';
+            if (newTitle !== currentTitle) {
+                await this.renameSpreadsheet(newTitle);
+            }
+            // Restore title display
+            this.restoreTitleDisplay(newTitle);
+        };
+
+        // Save on Enter key
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.blur();
+            } else if (e.key === 'Escape') {
+                // Cancel on Escape
+                this.restoreTitleDisplay(currentTitle);
+            }
+        });
+
+        // Save on blur
+        input.addEventListener('blur', saveNewTitle);
+    }
+
+    /**
+     * Restore title display after editing
+     * @param {string} title - Title to display
+     */
+    restoreTitleDisplay(title) {
+        const input = document.querySelector('.spreadsheet-title-input');
+        if (!input) return;
+
+        const titleElement = document.createElement('h1');
+        titleElement.id = 'spreadsheetTitle';
+        titleElement.className = 'spreadsheet-title';
+        titleElement.title = 'Click to rename';
+        titleElement.textContent = title;
+
+        input.parentNode.replaceChild(titleElement, input);
+
+        // Re-setup click handler
+        titleElement.addEventListener('click', () => {
+            this.makeTitleEditable();
+        });
+    }
+
+    /**
+     * Rename spreadsheet
+     * @param {string} newTitle - New spreadsheet title
+     */
+    async renameSpreadsheet(newTitle) {
+        try {
+            // Get current spreadsheet data
+            const spreadsheetData = await spreadsheetManager.getCurrentSpreadsheetData();
+            if (!spreadsheetData) {
+                this.showError('Failed to rename spreadsheet');
+                return;
+            }
+
+            // Update the name in the data
+            spreadsheetData.name = newTitle;
+            spreadsheetData.updatedAt = new Date().toISOString();
+
+            // Save to storage
+            const success = await spreadsheetManager.saveSpreadsheetMetadata(spreadsheetData);
+
+            if (success) {
+                this.showNotification('Spreadsheet renamed successfully', 'success');
+            } else {
+                this.showError('Failed to rename spreadsheet');
+            }
+        } catch (error) {
+            console.error('[APP] Error renaming spreadsheet:', error);
+            this.showError('Error renaming spreadsheet');
+        }
+    }
+
     // ================================================
     // Spreadsheet Operations
     // ================================================
@@ -223,6 +383,7 @@ class GridsApp {
         try {
             // Generate unique ID
             const newId = this.generateId();
+            console.log('[APP] Creating new spreadsheet with ID:', newId);
 
             // Create default data structure
             const defaultData = spreadsheetManager.createDefaultData();
@@ -233,13 +394,14 @@ class GridsApp {
                 throw new Error('Failed to initialize spreadsheet');
             }
 
-            // Save to storage
+            // Set and save to storage
             spreadsheetManager.currentSheetId = newId;
+            console.log('[APP] Set currentSheetId to:', spreadsheetManager.currentSheetId);
             await spreadsheetManager.save();
 
             return newId;
         } catch (error) {
-            console.error('Error creating new spreadsheet:', error);
+            console.error('[APP] Error creating new spreadsheet:', error);
             return null;
         }
     }
@@ -281,6 +443,19 @@ class GridsApp {
      */
     async save() {
         try {
+            console.log('[APP] Manual save requested');
+            console.log('[APP] app.spreadsheetId:', this.spreadsheetId);
+            console.log('[APP] spreadsheetManager.currentSheetId:', spreadsheetManager.currentSheetId);
+
+            // Ensure IDs are consistent
+            if (this.spreadsheetId && spreadsheetManager.currentSheetId !== this.spreadsheetId) {
+                console.warn('[APP] ID mismatch detected, correcting:', {
+                    app: this.spreadsheetId,
+                    manager: spreadsheetManager.currentSheetId
+                });
+                spreadsheetManager.currentSheetId = this.spreadsheetId;
+            }
+
             // Save spreadsheet data
             const success = await spreadsheetManager.save();
 
@@ -296,7 +471,7 @@ class GridsApp {
                 return false;
             }
         } catch (error) {
-            console.error('Error saving spreadsheet:', error);
+            console.error('[APP] Error saving spreadsheet:', error);
             this.showError('Error saving spreadsheet');
             return false;
         }
@@ -309,10 +484,17 @@ class GridsApp {
     async autoSave() {
         // Check if has unsaved changes
         if (this.hasUnsavedChanges) {
+            console.log('[APP] Auto-save triggered');
+            // Ensure ID consistency before saving
+            if (this.spreadsheetId && spreadsheetManager.currentSheetId !== this.spreadsheetId) {
+                console.warn('[APP] Auto-save: Correcting ID mismatch');
+                spreadsheetManager.currentSheetId = this.spreadsheetId;
+            }
             // Save if changed
-            await this.save();
+            await spreadsheetManager.save();
             // Reset unsaved flag
             this.hasUnsavedChanges = false;
+            console.log('[APP] Auto-save complete');
         }
     }
 
@@ -353,39 +535,107 @@ class GridsApp {
     }
 
     /**
+     * Set theme from theme option
+     * Handle theme selection from dropdown
+     * @param {string} theme - Theme name ('light', 'dark', or 'system')
+     */
+    setThemeFromOption(theme) {
+        if (theme === 'system') {
+            // Set system preference
+            const systemTheme = themeManager.getSystemTheme();
+            themeManager.setTheme(systemTheme);
+            // Store preference as 'system'
+            localStorage.setItem(themeManager.storageKey, 'system');
+        } else {
+            // Set specific theme
+            themeManager.setTheme(theme);
+        }
+        this.updateThemeIndicator();
+    }
+
+    /**
      * Update theme indicator in settings menu
      * Show current theme status
      */
     updateThemeIndicator() {
-        const themeIndicator = document.getElementById('themeIndicator');
-        if (themeIndicator) {
+        const themeText = document.getElementById('themeText');
+        if (themeText) {
             const currentTheme = themeManager.getCurrentTheme();
-            themeIndicator.className = `theme-indicator ${currentTheme}`;
+            const savedPreference = localStorage.getItem(themeManager.storageKey);
+
+            // Display name for theme
+            let themeDisplayName;
+            if (savedPreference === 'system') {
+                themeDisplayName = 'System';
+            } else {
+                // Capitalize the theme name
+                themeDisplayName = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
+            }
+
+            themeText.textContent = `Theme: ${themeDisplayName}`;
+
+            // Update active state on theme options
+            const themeOptions = document.querySelectorAll('.theme-option');
+            themeOptions.forEach(option => {
+                option.classList.remove('active');
+                const optionTheme = option.getAttribute('data-theme');
+                if ((savedPreference === 'system' && optionTheme === 'system') ||
+                    (savedPreference !== 'system' && optionTheme === currentTheme)) {
+                    option.classList.add('active');
+                }
+            });
         }
     }
 
     /**
      * Show key information
-     * Display user's access key info
+     * Display user's access key with copy functionality
      */
     showKeyInfo() {
-        const currentUserData = localStorage.getItem('grids_current_user');
+        const userKey = authManager ? authManager.getUserKey() : null;
         const keyModal = document.getElementById('keyModal');
-        const keyUsername = document.getElementById('keyUsername');
-        const keyCurrentTheme = document.getElementById('keyCurrentTheme');
+        const keyText = document.getElementById('keyText');
+        const keyCopyBtn = document.getElementById('keyCopyBtn');
+        const keyCopyFeedback = document.getElementById('keyCopyFeedback');
+        const keyModalCloseBtn = document.getElementById('keyModalCloseBtn');
+        const settingsDropdown = document.getElementById('settingsDropdown');
 
-        if (currentUserData) {
-            try {
-                const user = JSON.parse(currentUserData);
-                if (keyUsername) keyUsername.textContent = user.username;
-                if (keyCurrentTheme) keyCurrentTheme.textContent = themeManager.getCurrentTheme() || 'light';
-                if (keyModal) keyModal.classList.add('active');
-                if (settingsDropdown) settingsDropdown.classList.remove('active');
-            } catch (e) {
-                this.showNotification('User information unavailable', 'error');
+        if (keyModal) {
+            // Show the actual key
+            if (keyText && userKey) {
+                keyText.textContent = userKey;
+            } else {
+                keyText.textContent = 'Not available';
             }
-        } else {
-            this.showNotification('User information not found', 'error');
+
+            // Set up copy button
+            if (keyCopyBtn && userKey) {
+                keyCopyBtn.onclick = async () => {
+                    try {
+                        await navigator.clipboard.writeText(userKey);
+                        if (keyCopyFeedback) {
+                            keyCopyFeedback.classList.add('visible');
+                            setTimeout(() => {
+                                keyCopyFeedback.classList.remove('visible');
+                            }, 2000);
+                        }
+                    } catch (err) {
+                        console.error('Failed to copy key:', err);
+                    }
+                };
+            }
+
+            // Set up close button
+            if (keyModalCloseBtn) {
+                keyModalCloseBtn.onclick = () => this.hideKeyModal();
+            }
+
+            keyModal.classList.add('active');
+
+            // Close settings dropdown
+            if (settingsDropdown) {
+                settingsDropdown.classList.remove('active');
+            }
         }
     }
 
@@ -433,6 +683,23 @@ class GridsApp {
      */
     updateURL(id) {
         window.history.pushState(null, '', `?id=${id}`);
+    }
+
+    /**
+     * Update spreadsheet title in the top nav
+     * Display the spreadsheet name from cached data
+     */
+    updateSpreadsheetTitle(spreadsheetName = null) {
+        const titleElement = document.getElementById('spreadsheetTitle');
+        if (!titleElement || !this.spreadsheetId) return;
+
+        try {
+            // Use provided name, default to 'Untitled Spreadsheet' if not provided
+            titleElement.textContent = spreadsheetName || 'Untitled';
+        } catch (error) {
+            console.error('[APP] Failed to update spreadsheet title:', error);
+            titleElement.textContent = 'Untitled';
+        }
     }
 
     // ================================================
@@ -562,15 +829,8 @@ class GridsApp {
     hideLoadingState() {
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
-            // Immediately disable pointer events so interactions work
-            loadingOverlay.style.pointerEvents = 'none';
-            loadingOverlay.classList.add('hidden');
-            // Allow transition to complete before hiding display
-            setTimeout(() => {
-                if (loadingOverlay.classList.contains('hidden')) {
-                    loadingOverlay.style.display = 'none';
-                }
-            }, 500);
+            loadingOverlay.style.display = 'none';
+            loadingOverlay.classList.remove('hidden');
         }
     }
 
@@ -661,6 +921,45 @@ class GridsApp {
  */
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        console.log('[APP] DOM Content Loaded');
+
+        // Unregister any service workers that might interfere with API calls
+        if ('serviceWorker' in navigator) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                console.log('[APP] Found service workers:', registrations.length);
+                for (const registration of registrations) {
+                    console.log('[APP] Unregistering service worker:', registration.scope);
+                    await registration.unregister();
+                    console.log('[APP] Service worker unregistered successfully');
+                }
+            } catch (swError) {
+                console.warn('[APP] Service worker cleanup error:', swError);
+            }
+        }
+
+        // Wait for Luckysheet to be available (CDN loading)
+        let attempts = 0;
+        const maxAttempts = 100; // 10 seconds timeout (more realistic for CDN)
+        while (typeof luckysheet === 'undefined' && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+
+        if (typeof luckysheet === 'undefined') {
+            console.error('[APP] Luckysheet failed to load from CDN');
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+                    <h2>Failed to load spreadsheet library</h2>
+                    <p>Please check your internet connection and refresh the page.</p>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">Refresh</button>
+                </div>
+            `;
+            return;
+        }
+
+        console.log('[APP] Luckysheet loaded successfully');
+
         // Create app instance
         const app = new GridsApp();
 
@@ -668,14 +967,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const success = await app.init();
 
         if (!success) {
-            console.error('Failed to initialize application');
+            console.error('[APP] Failed to initialize application');
             app.showError('Failed to initialize application. Please refresh the page.');
         }
 
         // Expose app instance globally for debugging
         window.gridsApp = app;
     } catch (error) {
-        console.error('Application initialization error:', error);
+        console.error('[APP] Application initialization error:', error);
     }
 });
 

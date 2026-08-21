@@ -1,19 +1,19 @@
 /**
  * ================================================
- * GRIDS - Authentication Module
+ * GRIDS - Simplified Authentication Module
  * ================================================
  *
- * Handles user authentication with access keys:
+ * Handles user authentication following Notes project approach:
  * - Login with existing keys
  * - Auto-create account for new keys
- * - Session management
- * - Secure storage of hashed keys
+ * - Session management using sessionStorage
+ * - Hash-based identification (no session tokens)
  *
  * SECURITY NOTES:
  * - Raw keys are NEVER stored
- * - Only pepper-hashed keys are stored
- * - Session tokens are used for authenticated sessions
- * - Keys are hashed client-side before any API calls
+ * - Only pepper-hashed keys are used for identification
+ * - Uses sessionStorage for hash storage
+ * - Hash is sent with API requests for identification
  */
 
 // ================================================
@@ -21,23 +21,14 @@
 // ================================================
 
 const AUTH_CONFIG = {
-    // Storage keys
+    // API endpoint (new unified API)
+    apiEndpoint: '/api/users',
+
+    // Session storage keys
     storageKeys: {
-        users: 'grids_users',
-        sessions: 'grids_sessions',
-        currentUser: 'grids_current_user',
-    },
-
-    // Session duration (30 days)
-    sessionDuration: 30 * 24 * 60 * 60 * 1000,
-
-    // API endpoints (for when backend is implemented)
-    apiEndpoints: {
-        login: '/api/auth/login',
-        register: '/api/auth/register',
-        verify: '/api/auth/verify',
-        logout: '/api/auth/logout',
-    },
+        userHash: 'grids_user_hash',
+        userKey: 'grids_user_key'
+    }
 };
 
 // ================================================
@@ -47,208 +38,220 @@ const AUTH_CONFIG = {
 class AuthenticationManager {
     constructor() {
         this.currentUser = null;
-        this.sessionToken = null;
+        this.userHash = null;
+        this.userKey = null;
         this.isProduction = APP_CONFIG.isProduction;
         this.initialize();
     }
 
     /**
      * Initialize authentication manager
-     * Loads existing session if available
+     * Loads existing session from sessionStorage
      */
     async initialize() {
-        // Load existing session from storage
-        const storedSession = this.loadSession();
+        // Load existing session from sessionStorage (like Notes)
+        const storedHash = sessionStorage.getItem(AUTH_CONFIG.storageKeys.userHash);
+        const storedKey = sessionStorage.getItem(AUTH_CONFIG.storageKeys.userKey);
 
-        if (storedSession && this.isSessionValid(storedSession)) {
-            this.currentUser = storedSession.user;
-            this.sessionToken = storedSession.token;
-            // Redirect to main app if on login page
-            if (window.location.pathname === '/auth.html' || window.location.pathname.endsWith('auth.html')) {
-                window.location.href = '/index.html';
-            }   
+        if (storedHash && storedKey) {
+            this.userHash = storedHash;
+            this.userKey = storedKey;
+
+            // Verify session is still valid by fetching user data
+            const isValid = await this.verifySession();
+
+            if (isValid) {
+                console.log('[AUTH] Session restored successfully');
+                // Redirect to home page if on login page
+                if (window.location.pathname === '/auth.html' || window.location.pathname.endsWith('auth.html')) {
+                    window.location.href = '/home.html';
+                }
+            } else {
+                // Invalid session, clear storage
+                this.clearSession();
+            }
+        }
+    }
+
+    /**
+     * Verify session by fetching user data
+     * @returns {Promise<boolean>} - Session validity
+     */
+    async verifySession() {
+        if (!this.userHash) return false;
+
+        try {
+            const response = await fetch(`${AUTH_CONFIG.apiEndpoint}?hash=${encodeURIComponent(this.userHash)}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data) {
+                    this.currentUser = data.data;
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.error('[AUTH] Session verification error:', error);
+            return false;
         }
     }
 
     /**
      * Authenticate user with access key
      * - Logs in if key exists
-     * - Creates account if key doesn't exist
+     * - Creates account if key doesn't exist (auto-create like Notes)
      *
      * @param {string} rawKey - Raw access key from user
      * @returns {Promise<Object>} Authentication result
      */
     async authenticate(rawKey) {
         try {
-            // Validate key format
-            const validation = window.validateAccessKey(rawKey);
-            if (!validation.isValid) {
+            // Normalize key
+            const normalizedKey = rawKey.trim();
+
+            if (normalizedKey === '') {
                 return {
                     success: false,
-                    error: validation.message,
+                    error: 'Key cannot be empty'
                 };
             }
 
-            // Hash the access key
-            const hashedKey = await window.hashAccessKey(rawKey);
+            // Try login first
+            const loginResult = await this.login(normalizedKey);
 
-            // Check if user exists
-            const existingUser = await this.findUserByHashedKey(hashedKey);
-
-            if (existingUser) {
-                // Login existing user
-                return await this.loginUser(rawKey, hashedKey, existingUser);
-            } else {
-                // Create new account
-                return await this.createUser(rawKey, hashedKey);
+            // If login fails (user not found), try creating account
+            if (!loginResult.success && loginResult.error === 'User not found') {
+                console.log('[AUTH] User not found, creating account...');
+                return await this.createAccount(normalizedKey);
             }
+
+            return loginResult;
         } catch (error) {
-            console.error('Authentication error:', error);
+            console.error('[AUTH] Authentication error:', error);
             return {
                 success: false,
-                error: 'Authentication failed. Please try again.',
+                error: 'Authentication failed. Please try again.'
             };
         }
     }
 
     /**
-     * Login existing user
-     *
-     * @param {string} rawKey - Raw access key
-     * @param {string} hashedKey - Hashed access key
-     * @param {Object} user - User object
+     * Login with existing key
+     * @param {string} normalizedKey - Normalized access key
      * @returns {Promise<Object>} Login result
      */
-    async loginUser(rawKey, hashedKey, user) {
-        // Implement login logic
+    async login(normalizedKey) {
         try {
-            // Verify key matches
-            const isValid = await window.verifyAccessKey(rawKey, user.hashedKey);
+            const response = await fetch(AUTH_CONFIG.apiEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    key: normalizedKey,
+                    action: 'login'
+                })
+            });
 
-            if (!isValid) {
+            const data = await response.json();
+
+            if (data.success) {
+                // Store hash and key in sessionStorage (like Notes)
+                sessionStorage.setItem(AUTH_CONFIG.storageKeys.userHash, data.hash);
+                sessionStorage.setItem(AUTH_CONFIG.storageKeys.userKey, normalizedKey);
+
+                this.userHash = data.hash;
+                this.userKey = normalizedKey;
+                this.currentUser = data.data;
+
+                return {
+                    success: true,
+                    isNewUser: false,
+                    message: 'Welcome back!'
+                };
+            } else {
                 return {
                     success: false,
-                    error: 'Invalid access key',
+                    error: data.error || 'Login failed'
                 };
             }
-
-            // Generate session token
-            const sessionToken = await window.generateSessionToken(hashedKey);
-
-            // Create session
-            const session = {
-                token: sessionToken,
-                userId: user.id,
-                createdAt: Date.now(),
-                expiresAt: Date.now() + AUTH_CONFIG.sessionDuration,
-            };
-
-            // Save session
-            this.saveSession(session, user);
-
-            // Update current user
-            this.currentUser = user;
-            this.sessionToken = sessionToken;
-
-            return {
-                success: true,
-                user: user,
-                isNewUser: false,
-                message: 'Welcome back!',
-            };
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('[AUTH] Login error:', error);
             return {
                 success: false,
-                error: 'Login failed. Please try again.',
+                error: 'Login failed. Please try again.'
             };
         }
     }
 
     /**
-     * Create new user account
-     *
-     * @param {string} rawKey - Raw access key
-     * @param {string} hashedKey - Hashed access key
+     * Create new account
+     * @param {string} normalizedKey - Normalized access key
      * @returns {Promise<Object>} Registration result
      */
-    async createUser(rawKey, hashedKey) {
-        // Implement user creation
+    async createAccount(normalizedKey) {
         try {
-            // Generate unique user ID
-            const userId = this.generateUserId();
+            const response = await fetch(AUTH_CONFIG.apiEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    key: normalizedKey,
+                    action: 'create'
+                })
+            });
 
-            // Create user object (NEVER store raw key!)
-            const user = {
-                id: userId,
-                hashedKey: hashedKey, // Only store hashed key
-                createdAt: Date.now(),
-                lastLogin: Date.now(),
-                // Add other user properties as needed
-                settings: {
-                    theme: APP_CONFIG.themes.default,
-                },
-            };
+            const data = await response.json();
 
-            // Save user to storage
-            await this.saveUser(user);
+            if (data.success) {
+                // Store hash and key in sessionStorage
+                sessionStorage.setItem(AUTH_CONFIG.storageKeys.userHash, data.hash);
+                sessionStorage.setItem(AUTH_CONFIG.storageKeys.userKey, normalizedKey);
 
-            // Generate session token
-            const sessionToken = await window.generateSessionToken(hashedKey);
+                this.userHash = data.hash;
+                this.userKey = normalizedKey;
+                this.currentUser = data.data;
 
-            // Create session
-            const session = {
-                token: sessionToken,
-                userId: userId,
-                createdAt: Date.now(),
-                expiresAt: Date.now() + AUTH_CONFIG.sessionDuration,
-            };
-
-            // Save session
-            this.saveSession(session, user);
-
-            // Update current user
-            this.currentUser = user;
-            this.sessionToken = sessionToken;
-
-            return {
-                success: true,
-                user: user,
-                isNewUser: true,
-                message: 'Account created successfully!',
-            };
+                return {
+                    success: true,
+                    isNewUser: true,
+                    message: 'Account created successfully!'
+                };
+            } else {
+                return {
+                    success: false,
+                    error: data.error || 'Failed to create account'
+                };
+            }
         } catch (error) {
-            console.error('User creation error:', error);
+            console.error('[AUTH] Account creation error:', error);
             return {
                 success: false,
-                error: 'Failed to create account. Please try again.',
+                error: 'Failed to create account. Please try again.'
             };
         }
     }
 
     /**
      * Logout current user
-     *
      * @returns {Promise<Object>} Logout result
      */
     async logout() {
-        // Implement logout
         try {
-            // Clear session
+            // Clear sessionStorage (like Notes)
             this.clearSession();
 
             // Reset current user
             this.currentUser = null;
-            this.sessionToken = null;
+            this.userHash = null;
+            this.userKey = null;
 
             // Clear any app data associated with session
             const keysToRemove = [
                 APP_CONFIG.storage.keys.spreadsheetData,
                 APP_CONFIG.storage.keys.recentFiles,
-                APP_CONFIG.storage.keys.userSettings,
+                APP_CONFIG.storage.keys.userSettings
             ];
             keysToRemove.forEach(key => localStorage.removeItem(key));
-            
+
             // Redirect to login page
             if (window.location.pathname !== '/auth.html') {
                 window.location.href = '/auth.html';
@@ -256,29 +259,75 @@ class AuthenticationManager {
 
             return {
                 success: true,
-                message: 'Logged out successfully',
+                message: 'Logged out successfully'
             };
         } catch (error) {
-            console.error('Logout error:', error);
+            console.error('[AUTH] Logout error:', error);
             return {
                 success: false,
-                error: 'Logout failed',
+                error: 'Logout failed'
+            };
+        }
+    }
+
+    /**
+     * Delete current user account
+     * @returns {Promise<Object>} Deletion result
+     */
+    async deleteAccount() {
+        if (!this.userHash) {
+            return {
+                success: false,
+                error: 'No user logged in'
+            };
+        }
+
+        try {
+            const response = await fetch(`${AUTH_CONFIG.apiEndpoint}?hash=${encodeURIComponent(this.userHash)}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Clear session after successful deletion
+                this.clearSession();
+                this.currentUser = null;
+                this.userHash = null;
+                this.userKey = null;
+
+                // Redirect to login page
+                window.location.href = '/auth.html';
+
+                return {
+                    success: true,
+                    message: 'Account deleted successfully'
+                };
+            } else {
+                return {
+                    success: false,
+                    error: data.error || 'Failed to delete account'
+                };
+            }
+        } catch (error) {
+            console.error('[AUTH] Account deletion error:', error);
+            return {
+                success: false,
+                error: 'Failed to delete account. Please try again.'
             };
         }
     }
 
     /**
      * Check if user is authenticated
-     *
      * @returns {boolean} Authentication status
      */
     isAuthenticated() {
-        return this.currentUser !== null && this.sessionToken !== null;
+        return this.userHash !== null && this.currentUser !== null;
     }
 
     /**
      * Get current user
-     *
      * @returns {Object|null} Current user object
      */
     getCurrentUser() {
@@ -286,169 +335,27 @@ class AuthenticationManager {
     }
 
     /**
-     * Get session token
-     *
-     * @returns {string|null} Session token
+     * Get user hash
+     * @returns {string|null} User hash
      */
-    getSessionToken() {
-        return this.sessionToken;
-    }
-
-    // ================================================
-    // Private Methods (Storage Operations)
-    // ================================================
-
-    /**
-     * Find user by hashed key
-     * Implement user lookup
-     *
-     * @param {string} hashedKey - Hashed access key
-     * @returns {Promise<Object|null>} User object or null
-     */
-    async findUserByHashedKey(hashedKey) {
-        // Implement user lookup from storage
-        // For production: make API call to backend
-        // For development: check localStorage
-
-        if (this.isProduction) {
-            // Implement production user lookup
-            // const response = await fetch(`${AUTH_CONFIG.apiEndpoints.verify}`, {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //         'Authorization': `Bearer ${this.sessionToken}`
-            //     },
-            //     body: JSON.stringify({ hashedKey })
-            // });
-            // const data = await response.json();
-            // return data.user;
-        } else {
-            // Development: localStorage lookup
-            const users = this.loadUsers();
-            return users.find(user => user.hashedKey === hashedKey) || null;
-        }
-
-        return null;
+    getUserHash() {
+        return this.userHash;
     }
 
     /**
-     * Save user to storage
-     * Implement user storage
-     *
-     * @param {Object} user - User object
+     * Get user key (for display purposes only, like Notes)
+     * @returns {string|null} Normalized user key
      */
-    async saveUser(user) {
-        // Implement user storage
-        if (this.isProduction) {
-            // Implement production user storage
-            // const response = await fetch(AUTH_CONFIG.apiEndpoints.register, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({ user })
-            // });
-        } else {
-            // Development: localStorage storage
-            const users = this.loadUsers();
-            users.push(user);
-            localStorage.setItem(AUTH_CONFIG.storageKeys.users, JSON.stringify(users));
-        }
+    getUserKey() {
+        return this.userKey;
     }
 
     /**
-     * Load users from storage
-     * Implement user loading
-     *
-     * @returns {Array} Array of user objects
-     */
-    loadUsers() {
-        try {
-            const usersJson = localStorage.getItem(AUTH_CONFIG.storageKeys.users);
-            return usersJson ? JSON.parse(usersJson) : [];
-        } catch (error) {
-            console.error('Error loading users:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Save session to storage
-     * Implement session storage
-     *
-     * @param {Object} session - Session object
-     * @param {Object} user - User object
-     */
-    saveSession(session, user) {
-        try {
-            const sessionData = {
-                token: session.token,
-                userId: session.userId,
-                createdAt: session.createdAt,
-                expiresAt: session.expiresAt,
-                user: user,
-            };
-
-            localStorage.setItem(
-                AUTH_CONFIG.storageKeys.sessions,
-                JSON.stringify(sessionData)
-            );
-            localStorage.setItem(
-                AUTH_CONFIG.storageKeys.currentUser,
-                JSON.stringify(user)
-            );
-        } catch (error) {
-            console.error('Error saving session:', error);
-        }
-    }
-
-    /**
-     * Load session from storage
-     * Implement session loading
-     *
-     * @returns {Object|null} Session object or null
-     */
-    loadSession() {
-        try {
-            const sessionJson = localStorage.getItem(AUTH_CONFIG.storageKeys.sessions);
-            return sessionJson ? JSON.parse(sessionJson) : null;
-        } catch (error) {
-            console.error('Error loading session:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Clear session from storage
+     * Clear session from sessionStorage
      */
     clearSession() {
-        try {
-            localStorage.removeItem(AUTH_CONFIG.storageKeys.sessions);
-            localStorage.removeItem(AUTH_CONFIG.storageKeys.currentUser);
-        } catch (error) {
-            console.error('Error clearing session:', error);
-        }
-    }
-
-    /**
-     * Check if session is valid
-     *
-     * @param {Object} session - Session object
-     * @returns {boolean} Validity status
-     */
-    isSessionValid(session) {
-        if (!session || !session.expiresAt) {
-            return false;
-        }
-        return Date.now() < session.expiresAt;
-    }
-
-    /**
-     * Generate unique user ID
-     * Implement ID generation
-     *
-     * @returns {string} Unique user ID
-     */
-    generateUserId() {
-        return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        sessionStorage.removeItem(AUTH_CONFIG.storageKeys.userHash);
+        sessionStorage.removeItem(AUTH_CONFIG.storageKeys.userKey);
     }
 }
 
@@ -457,7 +364,6 @@ class AuthenticationManager {
 // ================================================
 
 // Create global authentication instance
-// This will be initialized when the DOM is ready
 const authManager = new AuthenticationManager();
 
 // Export for use in other modules

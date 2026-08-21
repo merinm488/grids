@@ -342,20 +342,29 @@ body::after {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    border: 2px solid var(--auth-border);
-    background-color: var(--auth-bg-secondary);
+    border: none;
+    background-color: transparent;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px var(--auth-shadow);
+    box-shadow: none;
     transition: all 0.3s ease;
 }
 
 .theme-toggle-btn:hover {
-    background-color: var(--auth-accent);
-    border-color: var(--auth-accent);
-    transform: scale(1.05);
+    background-color: transparent;
+    border: none;
+    transform: scale(1.1);
+    color: var(--auth-accent) !important;
+}
+
+.theme-toggle-btn:hover .theme-icon {
+    color: var(--auth-accent) !important;
+}
+
+.theme-toggle-btn:hover .theme-icon svg {
+    stroke: var(--auth-accent) !important;
 }
 
 .theme-toggle-btn:active {
@@ -363,8 +372,29 @@ body::after {
 }
 
 .theme-icon {
-    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
     transition: opacity 0.3s ease, transform 0.3s ease;
+    color: var(--auth-text-primary);
+}
+
+.theme-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor !important;
+    fill: none !important;
+    color: var(--auth-text-primary) !important;
+}
+
+.theme-icon.sun-icon {
+    color: var(--auth-text-primary);
+}
+
+.theme-icon.moon-icon {
+    color: var(--auth-text-primary);
 }
 
 [data-theme="dark"] .sun-icon {
@@ -377,12 +407,14 @@ body::after {
     transform: rotate(-180deg);
 }
 
-:not([data-theme="dark"]) .sun-icon {
+html:not([data-theme]) .sun-icon,
+[data-theme="light"] .sun-icon {
     opacity: 0;
     transform: rotate(180deg);
 }
 
-:not([data-theme="dark"]) .moon-icon {
+html:not([data-theme]) .moon-icon,
+[data-theme="light"] .moon-icon {
     opacity: 1;
     transform: rotate(0deg);
 }

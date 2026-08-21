@@ -48,7 +48,15 @@ class ThemeManager {
         // Load saved theme or use default
         // Apply theme to document
         // Set up event listeners for theme toggle
-        const themeName = this.loadSavedTheme() || this.defaultTheme;
+        let themeName = this.loadSavedTheme();
+
+        // If theme is 'system', get the system preference
+        if (themeName === 'system') {
+            themeName = this.getSystemTheme();
+        } else if (!themeName) {
+            themeName = this.defaultTheme;
+        }
+
         this.setTheme(themeName);
 
         // Only setup toggle button if it exists (for login page)
@@ -56,6 +64,9 @@ class ThemeManager {
         if (toggleBtn && !document.getElementById('settingsBtn')) {
             this.setupToggleButton();
         }
+
+        // Listen for system theme changes if 'system' is selected
+        this.watchSystemTheme();
     }
 
     /**
@@ -104,16 +115,8 @@ class ThemeManager {
 
         if (!sunIcon || !moonIcon) return;
 
-        const currentTheme = this.getCurrentTheme();
-
-        // Use CSS classes for state management
-        if (currentTheme === 'dark'){
-            sunIcon.style.display = 'block';
-            moonIcon.style.display = 'none';
-        } else {
-            sunIcon.style.display = 'none';
-            moonIcon.style.display = 'block';
-        }
+        // CSS handles visibility through opacity - no inline styles needed
+        // Just ensure icons are in the DOM
     }
 
     // ================================================
@@ -275,11 +278,14 @@ class ThemeManager {
      */
     watchSystemTheme() {
         // Listen for prefers-color-scheme changes
-        // Optionally auto-switch based on system preference
+        // Only auto-switch if user selected 'system' preference
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.addEventListener('change', (e) => {
-            const newTheme = e.matches ? 'dark' : 'light';
-            this.setTheme(newTheme);
+            const savedPreference = localStorage.getItem(this.storageKey);
+            if (savedPreference === 'system') {
+                const newTheme = e.matches ? 'dark' : 'light';
+                this.setTheme(newTheme);
+            }
         });
     }
 }
