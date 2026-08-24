@@ -3,6 +3,163 @@
    Global Styles & Theme Variables
    ================================================ */
 
+/* ================================================
+   PWA Styles
+   ================================================ */
+
+/* PWA Install Button */
+.pwa-install-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.pwa-install-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.pwa-install-btn:active {
+    transform: translateY(0);
+}
+
+.pwa-install-btn.hidden {
+    display: none;
+}
+
+/* PWA Update Notification */
+.pwa-update-notification,
+.pwa-success-notification {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 10px 40px var(--shadow-color);
+    z-index: 10000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.pwa-update-notification .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.pwa-update-notification .notification-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.pwa-update-notification .update-btn {
+    padding: 0.375rem 0.75rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.pwa-update-notification .update-btn:hover {
+    background: var(--accent-hover);
+}
+
+.pwa-update-notification .dismiss-btn {
+    padding: 0.375rem 0.75rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pwa-update-notification .dismiss-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* PWA Success Notification */
+.pwa-success-notification {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+}
+
+.pwa-success-notification .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+/* Connection Status */
+.connection-status {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    z-index: 9999;
+    transition: all 0.3s;
+}
+
+.connection-status.online {
+    background: var(--accent-color);
+    color: white;
+}
+
+.connection-status.offline {
+    background: #ef4444;
+    color: white;
+}
+
+/* PWA-specific responsive adjustments */
+@media (display-mode: standalone) {
+    /* Adjust spacing when running as standalone PWA */
+    .top-nav,
+    .home-header {
+        padding-top: env(safe-area-inset-top);
+    }
+
+    /* Add safe area support for notched devices */
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
 :root {
     /* Light Theme (Default) - Professional Palette */
     --bg-primary: #fafafa;
@@ -115,10 +272,11 @@ html, body {
     right: 0;
     margin-top: 4px;
     min-width: 200px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e5e5 !important;
     border-radius: 8px;
-    box-shadow: 0 4px 12px var(--shadow-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
@@ -126,6 +284,15 @@ html, body {
     overflow: visible;
     z-index: 99999;
     pointer-events: none;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+[data-theme="dark"] .settings-dropdown {
+    background-color: #1a1a1a !important;
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .settings-dropdown.active {
@@ -142,7 +309,7 @@ html, body {
     padding: 12px 16px;
     color: var(--text-primary);
     border: none;
-    background: transparent;
+    background-color: #ffffff;
     cursor: pointer;
     transition: background-color 0.2s ease;
     width: 100%;
@@ -152,9 +319,19 @@ html, body {
     font-weight: 500;
 }
 
+[data-theme="dark"] .settings-dropdown-item {
+    background-color: #1a1a1a;
+    color: #e5e5e5;
+}
+
 .settings-dropdown-item:hover {
-    background-color: var(--accent-light);
-    color: var(--accent-color);
+    background-color: #dcfce7;
+    color: #22c55e;
+}
+
+[data-theme="dark"] .settings-dropdown-item:hover {
+    background-color: #14532d;
+    color: #22c55e;
 }
 
 .settings-dropdown-item:first-child {
@@ -234,7 +411,8 @@ html, body {
     right: 100%;
     margin-right: 4px;
     min-width: 140px;
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-secondary, #ffffff);
+    background: var(--bg-secondary, #ffffff);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: 0 4px 12px var(--shadow-color);
@@ -245,6 +423,8 @@ html, body {
     overflow: hidden;
     z-index: 100000;
     pointer-events: none;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 .theme-submenu.active {
@@ -269,7 +449,7 @@ html, body {
     padding: 10px 14px;
     color: #1a1a1a;
     border: none;
-    background: transparent;
+    background-color: #ffffff;
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
     width: 100%;
@@ -280,6 +460,7 @@ html, body {
 }
 
 [data-theme="dark"] .theme-option {
+    background-color: #1a1a1a;
     color: #e5e5e5;
 }
 
@@ -417,6 +598,50 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    gap: 4px;
+}
+
+.top-nav-actions {
+    display: flex;
+    align-items: center;
+}
+
+/* Save button styling */
+#saveBtn {
+    position: relative;
+}
+
+.save-status {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: background-color 0.3s ease;
+}
+
+.save-status.saving {
+    background-color: #f59e0b;
+    animation: pulse 1s infinite;
+}
+
+.save-status.saved {
+    background-color: var(--accent-color);
+}
+
+.save-status.error {
+    background-color: #dc2626;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .spreadsheet-title {
@@ -670,12 +895,16 @@ input[type="text"] {
 .luckysheet-cell {
     background-color: var(--cell-bg) !important;
     color: var(--text-primary) !important;
+    font-family: Calibri, 'Segoe UI', Arial, sans-serif !important;
+    font-size: 11px !important;
 }
 
 /* Cell content */
 .luckysheet-cell span,
 .luckysheet-cell div {
     color: var(--text-primary) !important;
+    font-family: Calibri, 'Segoe UI', Arial, sans-serif !important;
+    font-size: 11px !important;
 }
 
 .luckysheet-selection-copy {
@@ -735,6 +964,81 @@ input[type="text"] {
     color: var(--text-primary) !important;
 }
 
+/* Fix Insert Link modal spacing issues */
+.luckysheet-modal-dialog .luckysheet-modal-content input,
+.luckysheet-modal-dialog .luckysheet-modal-content select {
+    margin-bottom: 16px !important;
+    min-height: 36px !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.luckysheet-modal-dialog .luckysheet-modal-content label {
+    display: block !important;
+    margin-bottom: 8px !important;
+    margin-top: 12px !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+}
+
+.luckysheet-modal-dialog .luckysheet-modal-content input:first-of-type + label,
+.luckysheet-modal-dialog .luckysheet-modal-content select:first-of-type + label {
+    margin-top: 0 !important;
+}
+
+/* Ensure modal content uses block layout */
+.luckysheet-modal-dialog .luckysheet-modal-content {
+    position: relative !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* Fix any absolutely positioned children in modal */
+.luckysheet-modal-dialog .luckysheet-modal-content > * {
+    position: static !important;
+}
+
+/* Additional fixes for Insert Link modal specifically */
+.luckysheet-modal-dialog {
+    max-width: 500px !important;
+    width: 90% !important;
+}
+
+/* Fix placeholder text truncation */
+.luckysheet-modal-dialog input::placeholder,
+.luckysheet-modal-dialog input::-webkit-input-placeholder,
+.luckysheet-modal-dialog input::-moz-placeholder {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}
+
+/* Fix label alignment for Link section */
+.luckysheet-modal-dialog .luckysheet-modal-content label[style*="bold"],
+.luckysheet-modal-dialog .luckysheet-modal-content > div > label:first-child {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 4px !important;
+}
+
+/* Ensure consistent spacing for all form groups */
+.luckysheet-modal-dialog .luckysheet-modal-content > div {
+    margin-bottom: 12px !important;
+    width: 100% !important;
+}
+
+/* Fix the address label alignment */
+.luckysheet-modal-dialog .luckysheet-modal-content label:nth-of-type(2),
+.luckysheet-modal-dialog .luckysheet-modal-content label:contains("address") {
+    margin-left: 0 !important;
+    margin-top: 8px !important;
+    display: block !important;
+}
+
 /* Buttons */
 .luckysheet-toolbar-button,
 .luckysheet-toolbar-button-hover {
@@ -751,12 +1055,63 @@ input[type="text"] {
    Luckysheet Dark Mode Fixes
    ================================================ */
 
-/* Cell editor input - always black text for visibility */
+/* Cell editor input - ensure proper contrast in all themes */
 .luckysheet-cell-input,
 .luckysheet-input-box,
 .luckysheet-cell-input textarea,
 .luckysheet-rich-text-editor,
 .luckysheet-selection-format {
+    color: var(--text-primary) !important;
+    font-family: Calibri, 'Segoe UI', Arial, sans-serif !important;
+    font-size: 11px !important;
+}
+
+/* Ensure textarea and input elements inside cells inherit proper color */
+.luckysheet-cell-input textarea,
+.luckysheet-cell-input input,
+.luckysheet-input-box textarea,
+.luckysheet-input-box input {
+    color: var(--text-primary) !important;
+}
+
+/* Force dark mode cell input styling with white background and black text for visibility */
+[data-theme="dark"] .luckysheet-cell-input,
+[data-theme="dark"] .luckysheet-input-box,
+[data-theme="dark"] .luckysheet-rich-text-editor {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+[data-theme="dark"] .luckysheet-cell-input textarea,
+[data-theme="dark"] .luckysheet-cell-input input,
+[data-theme="dark"] .luckysheet-input-box textarea,
+[data-theme="dark"] .luckysheet-input-box input,
+[data-theme="dark"] .luckysheet-rich-text-editor textarea,
+[data-theme="dark"] .luckysheet-rich-text-editor input {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* Ensure formula bar inputs and text have white background with black text in dark mode for visibility */
+[data-theme="dark"] .luckysheet-formula-input,
+[data-theme="dark"] .luckysheet-wa-editor input,
+[data-theme="dark"] .luckysheet-formula-bar-text,
+[data-theme="dark"] #luckysheet-formula-input-range,
+[data-theme="dark"] .luckysheet-info-detail-input,
+[data-theme="dark"] .luckysheet-cell-info,
+[data-theme="dark"] .luckysheet-cell-reference,
+[data-theme="dark"] .formula-bar input,
+[data-theme="dark"] .formula-bar span,
+[data-theme="dark"] .luckysheet-wa-editor .formula-bar {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* Additional formula bar text elements */
+[data-theme="dark"] .luckysheet-wa-editor .formula-bar span,
+[data-theme="dark"] .luckysheet-wa-editor .formula-bar div,
+[data-theme="dark"] .luckysheet-wa-editor .formula-bar p {
+    background-color: transparent !important;
     color: #000000 !important;
 }
 
@@ -766,7 +1121,7 @@ input[type="text"] {
 .luckysheet-info-bar,
 .luckysheet-wa-calculate-bar {
     background-color: var(--bg-secondary) !important;
-    color: #000000 !important;
+    color: var(--text-primary) !important;
     border-top: 1px solid var(--border-color) !important;
 }
 
@@ -777,7 +1132,7 @@ input[type="text"] {
 .luckysheet-wa-calculate-bar div,
 .luckysheet-info-bar span,
 .luckysheet-info-bar div {
-    color: #000000 !important;
+    color: var(--text-primary) !important;
 }
 
 /* Formula bar / cell reference input (top-left) - always visible */
@@ -792,7 +1147,7 @@ input[type="text"] {
 .luckysheet-cell-reference,
 .luckysheet-wa-editor .luckysheet-wa-editor {
     background-color: var(--bg-secondary) !important;
-    color: #000000 !important;
+    color: var(--text-primary) !important;
     border-color: var(--border-color) !important;
 }
 
@@ -804,28 +1159,72 @@ input[type="text"] {
     background-color: var(--bg-secondary) !important;
 }
 
-/* Formula bar elements in dark mode - ensure dark background */
-[data-theme="dark"] .luckysheet-wa-editor input,
-[data-theme="dark"] .luckysheet-formula-input,
-[data-theme="dark"] input[type="text"].luckysheet-formula-input {
-    background-color: var(--bg-secondary) !important;
-    color: #e5e5e5 !important;
+/* Status bar icons and buttons - ensure proper contrast in all themes */
+.luckysheet-wa-calculate-bottom a,
+.luckysheet-wa-calculate-bottom button,
+.luckysheet-wa-calculate-top a,
+.luckysheet-wa-calculate-top button,
+.luckysheet-statistic-bar a,
+.luckysheet-statistic-bar button,
+.luckysheet-info-bar a,
+.luckysheet-info-bar button {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
 }
 
-/* Statistic bar in dark mode - ensure proper colors */
-[data-theme="dark"] .luckysheet-statistic-bar,
-[data-theme="dark"] .luckysheet-wa-calculate-bar,
-[data-theme="dark"] .luckysheet-info-bar {
-    background-color: var(--bg-secondary) !important;
+.luckysheet-wa-calculate-bottom a:hover,
+.luckysheet-wa-calculate-bottom button:hover,
+.luckysheet-wa-calculate-top a:hover,
+.luckysheet-wa-calculate-top button:hover,
+.luckysheet-statistic-bar a:hover,
+.luckysheet-statistic-bar button:hover,
+.luckysheet-info-bar a:hover,
+.luckysheet-info-bar button:hover {
+    color: var(--accent-color) !important;
+    background-color: transparent !important;
 }
 
-[data-theme="dark"] .luckysheet-statistic-bar span,
-[data-theme="dark"] .luckysheet-statistic-bar div,
-[data-theme="dark"] .luckysheet-wa-calculate-bar span,
-[data-theme="dark"] .luckysheet-wa-calculate-bar div,
-[data-theme="dark"] .luckysheet-info-bar span,
-[data-theme="dark"] .luckysheet-info-bar div {
-    color: #e5e5e5 !important;
+/* Status bar icons (FontAwesome/i elements) */
+.luckysheet-wa-calculate-bottom i,
+.luckysheet-wa-calculate-top i,
+.luckysheet-statistic-bar i,
+.luckysheet-info-bar i,
+.luckysheet-wa-calculate-bottom .fa,
+.luckysheet-wa-calculate-top .fa,
+.luckysheet-statistic-bar .fa,
+.luckysheet-info-bar .fa {
+    color: var(--text-primary) !important;
+}
+
+/* Status bar icon containers */
+.luckysheet-wa-calculate-bottom div[class*="icon"],
+.luckysheet-wa-calculate-top div[class*="icon"],
+.luckysheet-statistic-bar div[class*="icon"],
+.luckysheet-info-bar div[class*="icon"] {
+    color: var(--text-primary) !important;
+}
+
+/* Dark mode status bar specific fixes */
+[data-theme="dark"] .luckysheet-wa-calculate-bottom a,
+[data-theme="dark"] .luckysheet-wa-calculate-bottom button,
+[data-theme="dark"] .luckysheet-wa-calculate-top a,
+[data-theme="dark"] .luckysheet-wa-calculate-top button,
+[data-theme="dark"] .luckysheet-statistic-bar a,
+[data-theme="dark"] .luckysheet-statistic-bar button,
+[data-theme="dark"] .luckysheet-info-bar a,
+[data-theme="dark"] .luckysheet-info-bar button {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .luckysheet-wa-calculate-bottom a:hover,
+[data-theme="dark"] .luckysheet-wa-calculate-bottom button:hover,
+[data-theme="dark"] .luckysheet-wa-calculate-top a:hover,
+[data-theme="dark"] .luckysheet-wa-calculate-top button:hover,
+[data-theme="dark"] .luckysheet-statistic-bar a:hover,
+[data-theme="dark"] .luckysheet-statistic-bar button:hover,
+[data-theme="dark"] .luckysheet-info-bar a:hover,
+[data-theme="dark"] .luckysheet-info-bar button:hover {
+    color: var(--accent-color) !important;
 }
 
 /* Row/column headers (A1, B22 etc.) - make visible in dark mode */
@@ -844,7 +1243,7 @@ input[type="text"] {
 .luckysheet-thead-cell span,
 .luckysheet-thead-cell-th span {
     background-color: var(--header-bg) !important;
-    color: #000000 !important;
+    color: var(--header-text) !important;
     border-color: var(--border-color) !important;
 }
 
@@ -879,16 +1278,97 @@ input[type="text"] {
     .settings-dropdown {
         min-width: 180px;
         bottom: 55px;
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1px solid #e5e5e5 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        position: absolute !important;
+        z-index: 99999 !important;
     }
 
+    .settings-dropdown.active {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .theme-submenu {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1px solid #e5e5e5 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        position: absolute !important;
+        z-index: 100000 !important;
+    }
+
+    .theme-submenu.active {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* Dark theme overrides for mobile */
+    [data-theme="dark"] .settings-dropdown {
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        border-color: #2a2a2a !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    [data-theme="dark"] .theme-submenu {
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        border-color: #2a2a2a !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* Ensure dropdown items have solid backgrounds on mobile */
     .settings-dropdown-item {
-        padding: 10px 14px;
-        font-size: 13px;
+        background-color: #ffffff !important;
+        color: #1a1a1a !important;
+    }
+
+    [data-theme="dark"] .settings-dropdown-item {
+        background-color: #1a1a1a !important;
+        color: #e5e5e5 !important;
+    }
+
+    /* Ensure dropdown items have proper hover states on mobile */
+    [data-theme="dark"] .settings-dropdown-item:hover {
+        background-color: #14532d !important;
+        color: #22c55e !important;
+    }
+
+    [data-theme="light"] .settings-dropdown-item:hover {
+        background-color: #dcfce7 !important;
+        color: #22c55e !important;
     }
 
     /* Make spreadsheet more mobile-friendly */
     .luckysheet-container {
         font-size: 14px;
+    }
+        color: #e5e5e5 !important;
+    }
+
+    [data-theme="light"] .theme-option {
+        color: #1a1a1a !important;
+    }
+
+    /* Mobile: position theme submenu below parent instead of to the right */
+    .theme-submenu {
+        top: 100% !important;
+        right: auto !important;
+        left: 0 !important;
+        margin-right: 0 !important;
+        margin-top: 4px !important;
+        transform: translateY(10px) !important;
+    }
+
+    .theme-submenu.active {
+        transform: translateY(0) !important;
     }
 }
 
@@ -1040,6 +1520,23 @@ input[type="text"] {
     .settings-dropdown {
         min-width: 180px;
         bottom: 55px;
+        background-color: var(--bg-secondary) !important;
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border-color) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    [data-theme="light"] .settings-dropdown {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border-color: #e5e5e5 !important;
+    }
+
+    [data-theme="dark"] .settings-dropdown {
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        border-color: #2a2a2a !important;
     }
 
     .settings-dropdown-item {
@@ -1347,4 +1844,523 @@ input[type="text"] {
     background-color: var(--accent-light);
     border-color: var(--accent-color);
     color: var(--accent-color);
+}
+
+/* ================================================
+   Delete Account Modal Styles
+   ================================================ */
+
+#deleteAccountModal .key-modal-content {
+    max-width: 450px;
+}
+
+#deleteAccountModal .key-modal-body p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+#deleteAccountModal .key-modal-body ul {
+    margin: 0 0 16px 0;
+    padding-left: 20px;
+}
+
+#deleteAccountModal .key-modal-body ul li {
+    margin: 8px 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.home-cancel-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.home-cancel-btn:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+[data-theme="dark"] .home-cancel-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .home-cancel-btn:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.home-confirm-delete-btn {
+    background-color: var(--accent-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.home-confirm-delete-btn:hover {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.home-confirm-delete-btn:active {
+    transform: translateY(0);
+}
+
+.home-confirm-delete-account-btn {
+    background-color: #dc2626;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.home-confirm-delete-account-btn:hover {
+    background-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.home-confirm-delete-account-btn:active {
+    transform: translateY(0);
+}
+
+/* ================================================
+   Text Color Utilities for Delete Account
+   ================================================ */
+
+.text-red-600 {
+    color: #dc2626;
+}
+
+[data-theme="dark"] .text-red-600 {
+    color: #ef4444;
+}
+
+.dark\:text-red-400 {
+    color: #f87171;
+}
+
+.text-gray-600 {
+    color: #4b5563;
+}
+
+[data-theme="dark"] .text-gray-600 {
+    color: #9ca3af;
+}
+
+.dark\:text-gray-400 {
+    color: #9ca3af;
+}
+
+.mb-4 {
+    margin-bottom: 16px;
+}
+
+.list-disc {
+    list-style-type: disc;
+}
+
+.pl-5 {
+    padding-left: 20px;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.flex {
+    display: flex;
+}
+
+.gap-3 {
+    gap: 12px;
+}
+
+.justify-end {
+    justify-content: flex-end;
+}
+
+/* ================================================
+   Share Modal Styles
+   ================================================ */
+
+.share-modal-content {
+    max-width: 500px;
+}
+
+#shareModal .key-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.space-y-3 > * + * {
+    margin-top: 12px;
+}
+
+.space-y-3 > * {
+    margin-bottom: 0;
+}
+
+.space-y-3 > *:not(:last-child) {
+    margin-bottom: 12px;
+}
+
+#shareUrlInput {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+#copyShareUrlBtn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#copyShareUrlBtn:active {
+    transform: scale(0.95);
+}
+
+#copyShareUrlBtn.copied {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* ================================================
+   Shared Page Styles
+   ================================================ */
+
+.shared-badge {
+    padding: 6px 12px;
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    max-width: 400px;
+    padding: 32px;
+}
+
+.error-icon {
+    width: 64px;
+    height: 64px;
+    color: #dc2626;
+    margin-bottom: 8px;
+}
+
+.error-container h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.error-container p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ================================================
+   Share Modal Styles - Modern & Clean
+   ================================================ */
+
+.share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .share-modal-overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.share-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.share-modal {
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.share-modal-overlay.active .share-modal {
+    transform: scale(1) translateY(0);
+}
+
+.share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 24px 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.share-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.share-modal-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.share-modal-close-btn:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.share-modal-body {
+    padding: 24px;
+}
+
+.share-modal-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 16px;
+    background-color: var(--accent-light);
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.share-modal-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.share-modal-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.share-modal-url-section {
+    margin-bottom: 16px;
+}
+
+.share-modal-url-section > .share-modal-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.share-modal-url-container {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.share-modal-url-input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    outline: none;
+    transition: all 0.2s ease;
+    cursor: text;
+}
+
+.share-modal-url-input:hover {
+    border-color: var(--text-secondary);
+}
+
+.share-modal-url-input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.share-modal-url-input:active {
+    transform: scale(0.99);
+}
+
+.share-modal-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.share-modal-copy-btn:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.share-modal-copy-btn:active {
+    transform: translateY(0);
+}
+
+.share-modal-copy-btn.copied {
+    background-color: var(--accent-color);
+}
+
+.share-modal-copy-btn .copy-icon {
+    display: block;
+}
+
+.share-modal-copy-btn .check-icon {
+    display: none;
+}
+
+.share-modal-copy-btn.copied .copy-icon {
+    display: none;
+}
+
+.share-modal-copy-btn.copied .check-icon {
+    display: block;
+}
+
+.share-modal-copy-btn .copy-text {
+    font-size: 14px;
+}
+
+.share-modal-info-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.share-modal-info-text svg {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+.share-modal-footer {
+    padding: 16px 24px 24px 24px;
+}
+
+.share-modal-done-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.share-modal-done-btn:hover {
+    background-color: var(--accent-light);
+    color: var(--accent-color);
+}
+
+.share-modal-done-btn:active {
+    transform: scale(0.98);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .share-modal {
+        max-width: 400px;
+    }
+
+    .share-modal-header,
+    .share-modal-body,
+    .share-modal-footer {
+        padding: 20px;
+    }
+
+    .share-modal-url-container {
+        flex-direction: column;
+    }
+
+    .share-modal-url-input {
+        width: 100%;
+    }
+
+    .share-modal-copy-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
 }

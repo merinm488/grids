@@ -35,7 +35,7 @@ class GridsApp {
      */
     async init() {
         try {
-            console.log('[APP] Starting initialization...');
+            // Starting initialization
 
             // Initialize theme manager
             themeManager.init();
@@ -48,11 +48,9 @@ class GridsApp {
 
             // Get or create spreadsheet ID
             this.spreadsheetId = this.getOrCreateSpreadsheetId();
-            console.log('[APP] Spreadsheet ID from URL:', this.spreadsheetId);
 
             // If no spreadsheet ID and user is authenticated, redirect to home
             if (!this.spreadsheetId && window.authManager && window.authManager.isAuthenticated()) {
-                console.log('[APP] No spreadsheet ID, redirecting to home page');
                 window.location.href = '/home.html';
                 return false;
             }
@@ -75,19 +73,18 @@ class GridsApp {
             // Initialize spreadsheet
             if (this.spreadsheetId && await this.load(this.spreadsheetId)) {
                 // Successfully loaded existing spreadsheet
-                console.log('[APP] Successfully loaded existing spreadsheet:', this.spreadsheetId);
-                console.log('[APP] spreadsheetManager.currentSheetId:', spreadsheetManager.currentSheetId);
-                // Use cached metadata instead of fetching
                 const metadata = spreadsheetManager.getMetadata();
                 this.updateSpreadsheetTitle(metadata?.name);
+                // Set up Luckysheet change hooks for auto-save
+                this.setupLuckysheetHooks();
             } else {
-                console.log('[APP] No valid spreadsheet ID or load failed, creating new spreadsheet');
                 // Create new spreadsheet
                 const newId = await this.createNew();
                 if (newId) {
                     this.spreadsheetId = newId;
                     this.updateURL(newId);
-                    console.log('[APP] Created and initialized new spreadsheet with ID:', newId);
+                    // Set up Luckysheet change hooks for auto-save
+                    this.setupLuckysheetHooks();
                 } else {
                     this.showError('Failed to create spreadsheet');
                     return false;
@@ -95,8 +92,6 @@ class GridsApp {
             }
 
             this.isInitialized = true;
-            console.log('[APP] Initialization complete. Final spreadsheetId:', this.spreadsheetId);
-            console.log('[APP] Final spreadsheetManager.currentSheetId:', spreadsheetManager.currentSheetId);
             return true;
         } catch (error) {
             console.error('[APP] Application initialization error:', error);
@@ -138,11 +133,19 @@ class GridsApp {
         const viewKeyBtn = document.getElementById('viewKeyBtn');
         const logoutBtn = document.getElementById('logoutBtn');
         const homeBtn = document.getElementById('homeBtn');
+        const saveBtn = document.getElementById('saveBtn');
 
         // Home button - navigate back to home page
         if (homeBtn) {
             homeBtn.addEventListener('click', () => {
                 window.location.href = '/home.html';
+            });
+        }
+
+        // Save button - manual save
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.save();
             });
         }
 
@@ -229,6 +232,76 @@ class GridsApp {
             });
         }
 
+        // Delete account button
+        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+        if (deleteAccountBtn) {
+            deleteAccountBtn.addEventListener('click', () => {
+                this.showDeleteAccountModal();
+            });
+        }
+
+        // Share button
+        const shareBtn = document.getElementById('shareBtn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => {
+                this.showShareModal();
+            });
+        }
+
+        // Share modal events
+        const shareModalClose = document.getElementById('shareModalClose');
+        const shareModalCloseBtn = document.getElementById('shareModalCloseBtn');
+        const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
+
+        if (shareModalClose) {
+            shareModalClose.addEventListener('click', () => this.hideShareModal());
+        }
+
+        if (shareModalCloseBtn) {
+            shareModalCloseBtn.addEventListener('click', () => this.hideShareModal());
+        }
+
+        if (copyShareUrlBtn) {
+            copyShareUrlBtn.addEventListener('click', () => this.copyShareUrl());
+        }
+
+        // Close share modal on outside click
+        const shareModal = document.getElementById('shareModal');
+        if (shareModal) {
+            shareModal.addEventListener('click', (e) => {
+                if (e.target === shareModal) {
+                    this.hideShareModal();
+                }
+            });
+        }
+
+        // Delete account modal events
+        const deleteAccountModalClose = document.getElementById('deleteAccountModalClose');
+        const cancelDeleteAccount = document.getElementById('cancelDeleteAccount');
+        const confirmDeleteAccount = document.getElementById('confirmDeleteAccount');
+
+        if (deleteAccountModalClose) {
+            deleteAccountModalClose.addEventListener('click', () => this.hideDeleteAccountModal());
+        }
+
+        if (cancelDeleteAccount) {
+            cancelDeleteAccount.addEventListener('click', () => this.hideDeleteAccountModal());
+        }
+
+        if (confirmDeleteAccount) {
+            confirmDeleteAccount.addEventListener('click', () => this.confirmDeleteAccount());
+        }
+
+        // Close delete account modal on outside click
+        const deleteAccountModal = document.getElementById('deleteAccountModal');
+        if (deleteAccountModal) {
+            deleteAccountModal.addEventListener('click', (e) => {
+                if (e.target === deleteAccountModal) {
+                    this.hideDeleteAccountModal();
+                }
+            });
+        }
+
         // Update theme indicator
         this.updateThemeIndicator();
     }
@@ -239,6 +312,7 @@ class GridsApp {
     handleResize() {
         // Luckysheet handles resize automatically
         // Add any custom resize logic here if needed
+        this.updateThemeIndicator();
     }
 
     /**
@@ -390,7 +464,6 @@ class GridsApp {
         try {
             // Generate unique ID
             const newId = this.generateId();
-            console.log('[APP] Creating new spreadsheet with ID:', newId);
 
             // Create default data structure
             const defaultData = spreadsheetManager.createDefaultData();
@@ -403,7 +476,6 @@ class GridsApp {
 
             // Set and save to storage
             spreadsheetManager.currentSheetId = newId;
-            console.log('[APP] Set currentSheetId to:', spreadsheetManager.currentSheetId);
             await spreadsheetManager.save();
 
             return newId;
@@ -421,14 +493,8 @@ class GridsApp {
      */
     async load(id) {
         try {
-            // Show loading state
-            spreadsheetManager.showLoading();
-
-            // Load from storage
+            // Load from storage (spreadsheetManager.load() handles its own loading state)
             const success = await spreadsheetManager.load(id);
-
-            // Hide loading state
-            spreadsheetManager.hideLoading();
 
             if (success) {
                 this.spreadsheetId = id;
@@ -438,7 +504,6 @@ class GridsApp {
             return false;
         } catch (error) {
             console.error('Error loading spreadsheet:', error);
-            spreadsheetManager.hideLoading();
             return false;
         }
     }
@@ -450,16 +515,12 @@ class GridsApp {
      */
     async save() {
         try {
-            console.log('[APP] Manual save requested');
-            console.log('[APP] app.spreadsheetId:', this.spreadsheetId);
-            console.log('[APP] spreadsheetManager.currentSheetId:', spreadsheetManager.currentSheetId);
+            // Show saving status
+            this.updateSaveStatus('saving');
 
             // Ensure IDs are consistent
             if (this.spreadsheetId && spreadsheetManager.currentSheetId !== this.spreadsheetId) {
-                console.warn('[APP] ID mismatch detected, correcting:', {
-                    app: this.spreadsheetId,
-                    manager: spreadsheetManager.currentSheetId
-                });
+                console.warn('[APP] ID mismatch detected, correcting');
                 spreadsheetManager.currentSheetId = this.spreadsheetId;
             }
 
@@ -471,14 +532,17 @@ class GridsApp {
                 this.hasUnsavedChanges = false;
 
                 // Show save confirmation
+                this.updateSaveStatus('saved');
                 this.showNotification('Spreadsheet saved successfully', 'success');
                 return true;
             } else {
+                this.updateSaveStatus('error');
                 this.showError('Failed to save spreadsheet');
                 return false;
             }
         } catch (error) {
             console.error('[APP] Error saving spreadsheet:', error);
+            this.updateSaveStatus('error');
             this.showError('Error saving spreadsheet');
             return false;
         }
@@ -491,17 +555,139 @@ class GridsApp {
     async autoSave() {
         // Check if has unsaved changes
         if (this.hasUnsavedChanges) {
-            console.log('[APP] Auto-save triggered');
             // Ensure ID consistency before saving
             if (this.spreadsheetId && spreadsheetManager.currentSheetId !== this.spreadsheetId) {
                 console.warn('[APP] Auto-save: Correcting ID mismatch');
                 spreadsheetManager.currentSheetId = this.spreadsheetId;
             }
+            // Show saving status for auto-save too
+            this.updateSaveStatus('saving');
             // Save if changed
-            await spreadsheetManager.save();
+            const success = await spreadsheetManager.save();
             // Reset unsaved flag
             this.hasUnsavedChanges = false;
-            console.log('[APP] Auto-save complete');
+            // Update status
+            if (success) {
+                this.updateSaveStatus('saved');
+            } else {
+                this.updateSaveStatus('error');
+            }
+        }
+    }
+
+    /**
+     * Setup Luckysheet event hooks for auto-save
+     * Track changes to enable auto-save functionality
+     */
+    setupLuckysheetHooks() {
+        if (!luckysheet || !luckysheet.hook) {
+            console.warn('[APP] Luckysheet hooks not available, auto-save may not work properly');
+            return;
+        }
+
+        // Hook into various Luckysheet events to track changes
+        luckysheet.hook.cellEditBefore = function (range) {
+            // Cell edit about to happen
+        };
+
+        luckysheet.hook.cellEditAfter = function (range) {
+            // Mark as changed when cells are edited
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.cellMerged = function (range) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.cellAllEditBefore = function (range) {
+            // All cells edit about to happen
+        };
+
+        luckysheet.hook.cellFormatBefore = function (range) {
+            // Format change about to happen
+        };
+
+        luckysheet.hook.cellFormatAfter = function (range) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.rowColChange = function (type, rowIndex, colIndex, oldValue, newValue) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.scroll = function (scrollLeft, scrollTop) {
+            // Don't mark as changed on scroll
+        };
+
+        luckysheet.hook.selectionChange = function (range) {
+            // Don't mark as changed on selection change only
+        };
+
+        luckysheet.hook.rangeEditAfter = function (range) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.rangeClear = function (range) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.sheetAdd = function (sheetObject) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.sheetDelete = function (sheetObject) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+
+        luckysheet.hook.sheetRename = function (sheetObject) {
+            if (window.gridsApp) {
+                window.gridsApp.markAsChanged();
+            }
+        };
+    }
+
+    /**
+     * Update save status indicator
+     * @param {string} status - Status ('saving', 'saved', 'error', or null to clear)
+     */
+    updateSaveStatus(status) {
+        const saveStatus = document.getElementById('saveStatus');
+        if (!saveStatus) return;
+
+        // Clear all classes
+        saveStatus.classList.remove('saving', 'saved', 'error');
+
+        // Add appropriate class
+        if (status === 'saving') {
+            saveStatus.classList.add('saving');
+        } else if (status === 'saved') {
+            saveStatus.classList.add('saved');
+            // Clear saved status after 2 seconds
+            setTimeout(() => {
+                saveStatus.classList.remove('saved');
+            }, 2000);
+        } else if (status === 'error') {
+            saveStatus.classList.add('error');
+            // Clear error status after 3 seconds
+            setTimeout(() => {
+                saveStatus.classList.remove('error');
+            }, 3000);
         }
     }
 
@@ -579,7 +765,12 @@ class GridsApp {
                 themeDisplayName = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
             }
 
-            themeText.textContent = `Theme: ${themeDisplayName}`;
+            // On mobile devices, show just "Theme" to fit on one line
+            if (window.innerWidth <= 640) {
+                themeText.textContent = 'Theme';
+            } else {
+                themeText.textContent = `Theme: ${themeDisplayName}`;
+            }
 
             // Update active state on theme options
             const themeOptions = document.querySelectorAll('.theme-option');
@@ -666,6 +857,212 @@ class GridsApp {
             console.error('Logout error:', error);
             // Force redirect even if logout fails
             window.location.href = '/auth.html';
+        }
+    }
+
+    /**
+     * Show delete account confirmation modal
+     * Display modal with warning about account deletion
+     */
+    showDeleteAccountModal() {
+        const deleteAccountModal = document.getElementById('deleteAccountModal');
+        const settingsDropdown = document.getElementById('settingsDropdown');
+
+        if (deleteAccountModal) {
+            deleteAccountModal.classList.add('active');
+        }
+
+        // Close settings dropdown
+        if (settingsDropdown) {
+            settingsDropdown.classList.remove('active');
+        }
+    }
+
+    /**
+     * Hide delete account confirmation modal
+     * Close the modal without taking action
+     */
+    hideDeleteAccountModal() {
+        const deleteAccountModal = document.getElementById('deleteAccountModal');
+        if (deleteAccountModal) {
+            deleteAccountModal.classList.remove('active');
+        }
+    }
+
+    /**
+     * Confirm and delete account
+     * Execute account deletion and redirect
+     */
+    async confirmDeleteAccount() {
+        try {
+            if (authManager) {
+                const result = await authManager.deleteAccount();
+
+                if (result.success) {
+                    // The authManager handles the redirect
+                } else {
+                    this.showError(result.error || 'Failed to delete account');
+                    this.hideDeleteAccountModal();
+                }
+            } else {
+                this.showError('Authentication manager not available');
+                this.hideDeleteAccountModal();
+            }
+        } catch (error) {
+            console.error('[APP] Delete account error:', error);
+            this.showError('Failed to delete account');
+            this.hideDeleteAccountModal();
+        }
+    }
+
+    // ================================================
+    // Share Modal
+    // ================================================
+
+    /**
+     * Show share modal
+     * Display shareable link for current spreadsheet
+     */
+    async showShareModal() {
+        try {
+            if (!this.spreadsheetId) {
+                this.showError('No spreadsheet to share');
+                return;
+            }
+
+            const shareModal = document.getElementById('shareModal');
+            const shareSpreadsheetName = document.getElementById('shareSpreadsheetName');
+            const shareUrlInput = document.getElementById('shareUrlInput');
+            const copyButtonText = document.getElementById('copyButtonText');
+            const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
+
+            // Get current spreadsheet name
+            const metadata = spreadsheetManager.getMetadata();
+            if (shareSpreadsheetName) {
+                shareSpreadsheetName.textContent = metadata?.name || 'Untitled Spreadsheet';
+            }
+
+            // Show loading state in modal
+            if (shareUrlInput) {
+                shareUrlInput.value = 'Generating share link...';
+            }
+
+            // Show the modal
+            if (shareModal) {
+                shareModal.classList.add('active');
+            }
+
+            // Generate share link
+            const result = await gridsStorage.shareSpreadsheet(this.spreadsheetId);
+
+            if (result && result.shareUrl) {
+                if (shareUrlInput) {
+                    shareUrlInput.value = result.shareUrl;
+                }
+            } else {
+                this.showError('Failed to generate share link');
+                this.hideShareModal();
+            }
+
+        } catch (error) {
+            console.error('[APP] Show share modal error:', error);
+            this.showError('Failed to share spreadsheet');
+            this.hideShareModal();
+        }
+    }
+
+    /**
+     * Hide share modal
+     * Close the share modal
+     */
+    hideShareModal() {
+        const shareModal = document.getElementById('shareModal');
+        if (shareModal) {
+            shareModal.classList.remove('active');
+        }
+
+        // Reset copy button state
+        const copyButtonText = document.getElementById('copyButtonText');
+        const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
+
+        if (copyButtonText) {
+            copyButtonText.textContent = 'Copy';
+        }
+
+        if (copyShareUrlBtn) {
+            copyShareUrlBtn.classList.remove('copied');
+        }
+    }
+
+    /**
+     * Copy share URL to clipboard
+     */
+    async copyShareUrl() {
+        const shareUrlInput = document.getElementById('shareUrlInput');
+        const copyButtonText = document.getElementById('copyButtonText');
+        const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
+
+        if (!shareUrlInput || !shareUrlInput.value) {
+            this.showError('No share link to copy');
+            return;
+        }
+
+        try {
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(shareUrlInput.value);
+
+                // Update button state
+                if (copyButtonText) {
+                    copyButtonText.textContent = 'Copied!';
+                }
+                if (copyShareUrlBtn) {
+                    copyShareUrlBtn.classList.add('copied');
+                }
+
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    if (copyButtonText) {
+                        copyButtonText.textContent = 'Copy';
+                    }
+                    if (copyShareUrlBtn) {
+                        copyShareUrlBtn.classList.remove('copied');
+                    }
+                }, 2000);
+
+                return;
+            }
+
+            // Fallback for older browsers
+            shareUrlInput.select();
+            shareUrlInput.setSelectionRange(0, 99999);
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    if (copyButtonText) {
+                        copyButtonText.textContent = 'Copied!';
+                    }
+                    if (copyShareUrlBtn) {
+                        copyShareUrlBtn.classList.add('copied');
+                    }
+
+                    setTimeout(() => {
+                        if (copyButtonText) {
+                            copyButtonText.textContent = 'Copy';
+                        }
+                        if (copyShareUrlBtn) {
+                            copyShareUrlBtn.classList.remove('copied');
+                        }
+                    }, 2000);
+                }
+            } catch (execErr) {
+                console.error('[APP] Fallback copy failed:', execErr);
+                this.showError('Failed to copy link');
+            }
+        } catch (err) {
+            console.error('[APP] Copy error:', err);
+            this.showError('Failed to copy link');
         }
     }
 
@@ -768,9 +1165,7 @@ class GridsApp {
     onSheetChange(event) {
         // Update current sheet reference
         const currentSheet = spreadsheetManager.getCurrentSheetData();
-        if (currentSheet) {
-            console.log('Switched to sheet:', currentSheet.name);
-        }
+        // Sheet changed successfully
     }
 
     /**
@@ -928,17 +1323,12 @@ class GridsApp {
  */
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('[APP] DOM Content Loaded');
-
         // Unregister any service workers that might interfere with API calls
         if ('serviceWorker' in navigator) {
             try {
                 const registrations = await navigator.serviceWorker.getRegistrations();
-                console.log('[APP] Found service workers:', registrations.length);
                 for (const registration of registrations) {
-                    console.log('[APP] Unregistering service worker:', registration.scope);
                     await registration.unregister();
-                    console.log('[APP] Service worker unregistered successfully');
                 }
             } catch (swError) {
                 console.warn('[APP] Service worker cleanup error:', swError);
@@ -964,8 +1354,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
             return;
         }
-
-        console.log('[APP] Luckysheet loaded successfully');
 
         // Create app instance
         const app = new GridsApp();

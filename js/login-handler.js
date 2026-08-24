@@ -234,10 +234,6 @@ class LoginHandler {
     async checkExistingSession() {
         // Check if user is already authenticated
         if (window.authManager && window.authManager.isAuthenticated()) {
-            // Redirect to main app
-            const user = window.authManager.getCurrentUser();
-            console.log('User already authenticated:', user);
-
             // Auto-redirect immediately
             window.location.href = '/home.html';
         }

@@ -41,14 +41,6 @@ class SpreadsheetManager {
      * @returns {Promise<boolean>} Success status
      */
     async initialize(initialData = null) {
-        // Get container element
-        // Build Luckysheet options
-        // Load initial data or create default sheet
-        // Initialize Luckysheet with luckysheet.create()
-        // Set up event listeners
-        // Mark as initialized
-        console.log('[SPREADSHEET] Starting initialization with data:', initialData);
-
         let containerElement = document.getElementById(APP_CONFIG.spreadsheet.container);
         if (containerElement === null){
             console.error('[SPREADSHEET] Container element not found:', APP_CONFIG.spreadsheet.container);
@@ -56,26 +48,21 @@ class SpreadsheetManager {
             return false;
         }
 
-        console.log('[SPREADSHEET] Container element found:', containerElement);
         this.container = containerElement;
         this.showLoading();
 
         // Store data BEFORE creating Luckysheet
         this.data = initialData || this.createDefaultData();
-        console.log('[SPREADSHEET] Using data:', this.data);
 
         let options = this.buildOptions(this.data);
-        console.log('[SPREADSHEET] Built options:', options);
 
         try {
-            console.log('[SPREADSHEET] Calling luckysheet.create...');
             luckysheet.create(options);
 
             // Wait a bit for Luckysheet to render
             await new Promise(resolve => setTimeout(resolve, 200));
 
             this.isInitialized = true;
-            console.log('[SPREADSHEET] Luckysheet initialization complete');
             this.hideLoading();
             return true;
         } catch (error) {
@@ -136,6 +123,11 @@ class SpreadsheetManager {
         // Set user/folder properties
         options.userInfo = APP_CONFIG.spreadsheet.userInfo;
         options.myFolderUrl = APP_CONFIG.spreadsheet.myFolderUrl;
+
+        // Set default column width and row height
+        options.defaultColWidth = 73;
+        options.defaultRowHeight = 19;
+
         return options;
     }
 
@@ -145,19 +137,16 @@ class SpreadsheetManager {
      * @returns {object} Default spreadsheet data
      */
     createDefaultData() {
-        console.log('[SPREADSHEET] Creating default data');
-        // Create default sheet with sample data
-        // Include: sheet name, row/column count, cell data
         const defaultSheet = {
             name: 'Sheet1',
             row: APP_CONFIG.spreadsheet.default.row,
             column: APP_CONFIG.spreadsheet.default.column,
             celldata: [],
-            // Add required Luckysheet properties
             luckysheet_select_save: [{ row: [0, 1], column: [0, 1] }],
-            luckysheet_selection_range: []
+            luckysheet_selection_range: [],
+            luckysheet_defaultColWidth: 73,
+            luckysheet_defaultRowHeight: 19
         };
-        console.log('[SPREADSHEET] Default sheet created:', defaultSheet);
         return [defaultSheet];
     }
 
@@ -172,11 +161,6 @@ class SpreadsheetManager {
      * @returns {Promise<boolean>} Success status
      */
     async loadData(data) {
-        // Validate data structure
-        // Update Luckysheet with new data
-        // Handle multiple sheets
-        console.log('[SPREADSHEET] loadData called with:', data);
-
         if(!this.validateData(data)){
             console.error('[SPREADSHEET] Invalid data structure:', data);
             return false;
@@ -184,7 +168,6 @@ class SpreadsheetManager {
 
         try {
             if(!this.isInitialized){
-                console.log('[SPREADSHEET] First initialization with data');
                 const success = await this.initialize(data);
                 if (!success) {
                     console.error('[SPREADSHEET] Failed to initialize');
@@ -192,7 +175,6 @@ class SpreadsheetManager {
                 }
                 return true;
             } else {
-                console.log('[SPREADSHEET] Reinitializing with new data');
                 luckysheet.destroy();
                 this.isInitialized = false;
                 // Wait for destruction to complete
@@ -250,9 +232,6 @@ class SpreadsheetManager {
      * @returns {Promise<boolean>} Success status
      */
     async save() {
-        // Get current data
-        console.log('[SPREADSHEET] Saving spreadsheet...');
-        console.log('[SPREADSHEET] Current sheet ID:', this.currentSheetId);
         const currentSheetData = this.getData();
         if(!currentSheetData || !this.currentSheetId){
             console.error('[SPREADSHEET] Error saving - no data or sheet ID');
@@ -266,26 +245,29 @@ class SpreadsheetManager {
         };
 
         // Build complete spreadsheet object with metadata
-        // IMPORTANT: Ensure the id matches exactly what we're saving to
         const spreadsheetData = {
-            id: this.currentSheetId, // Use the currentSheetId as the definitive ID
+            id: this.currentSheetId,
             name: existingSpreadsheet.name || 'Untitled Spreadsheet',
             data: currentSheetData,
             createdAt: existingSpreadsheet.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            sharedId: existingSpreadsheet.sharedId || null
         };
 
-        console.log('[SPREADSHEET] Saving spreadsheet with ID:', spreadsheetData.id);
-        console.log('[SPREADSHEET] Complete spreadsheet object:', spreadsheetData);
         const success = await gridsStorage.saveSpreadsheet(this.currentSheetId, spreadsheetData);
 
-        // Update cached metadata
+        // Update cached metadata immediately after save
         if (success) {
             this.currentSpreadsheetMetadata = spreadsheetData;
-            console.log('[SPREADSHEET] Successfully saved and cached metadata');
+
+            // If spreadsheet is shared, update the shared copy asynchronously (non-blocking)
+            if (spreadsheetData.sharedId) {
+                this.updateSharedCopy(spreadsheetData).catch(e => {
+                    console.error('[SPREADSHEET] Failed to update shared copy:', e);
+                });
+            }
         }
 
-        console.log('[SPREADSHEET] Save result:', success);
         return success;
     }
 
@@ -297,44 +279,39 @@ class SpreadsheetManager {
      */
     async load(id) {
         this.showLoading();
-        console.log('[SPREADSHEET] Loading spreadsheet with ID:', id);
 
         try {
             // Set currentSheetId immediately to ensure consistency
             this.currentSheetId = id;
-            console.log('[SPREADSHEET] Set currentSheetId to:', this.currentSheetId);
 
             // Get specific spreadsheet from user data
             let spreadsheetData = await gridsStorage.getSpreadsheet(id);
 
             if(!spreadsheetData){
                 console.error('[SPREADSHEET] No spreadsheet data found for ID:', id);
-                this.currentSheetId = null; // Reset since load failed
+                this.currentSheetId = null;
                 this.hideLoading();
                 return false;
             }
 
-            console.log('[SPREADSHEET] Retrieved spreadsheet data:', spreadsheetData);
-
-            // Cache the metadata (id, name, dates) to avoid refetching
+            // Cache the metadata (id, name, dates, sharedId) to avoid refetching
             this.currentSpreadsheetMetadata = {
                 id: spreadsheetData.id,
                 name: spreadsheetData.name,
                 createdAt: spreadsheetData.createdAt,
-                updatedAt: spreadsheetData.updatedAt
+                updatedAt: spreadsheetData.updatedAt,
+                sharedId: spreadsheetData.sharedId || null
             };
 
             // Extract the actual spreadsheet data from the stored object
             let data = spreadsheetData.data || spreadsheetData;
-            console.log('[SPREADSHEET] Extracted data:', data);
 
             // If data is an array (multiple sheets), use it directly
             let sheetData = Array.isArray(data) ? data : (data.data || data);
-            console.log('[SPREADSHEET] Final sheet data:', sheetData);
 
             if (!sheetData || sheetData.length === 0) {
                 console.error('[SPREADSHEET] Invalid or empty sheet data');
-                this.currentSheetId = null; // Reset since load failed
+                this.currentSheetId = null;
                 this.hideLoading();
                 return false;
             }
@@ -342,18 +319,17 @@ class SpreadsheetManager {
             const loadSuccess = await this.loadData(sheetData);
             if (!loadSuccess) {
                 console.error('[SPREADSHEET] Failed to load data into Luckysheet');
-                this.currentSheetId = null; // Reset since load failed
+                this.currentSheetId = null;
                 this.hideLoading();
                 return false;
             }
 
             this.data = sheetData;
             this.hideLoading();
-            console.log('[SPREADSHEET] Successfully loaded spreadsheet. currentSheetId:', this.currentSheetId);
             return true;
         } catch (error) {
             console.error('[SPREADSHEET] Load error:', error);
-            this.currentSheetId = null; // Reset since load failed
+            this.currentSheetId = null;
             this.hideLoading();
             return false;
         }
@@ -810,9 +786,6 @@ class SpreadsheetManager {
      * @returns {boolean} Valid or not
      */
     validateData(data) {
-        // Check required fields and structure
-        console.log('[SPREADSHEET] Validating data:', data);
-
         if (!data || !Array.isArray(data) || data.length === 0) {
             console.error('[SPREADSHEET] Data is not a valid array');
             return false;
@@ -823,14 +796,12 @@ class SpreadsheetManager {
                 console.error('[SPREADSHEET] Sheet missing name or invalid:', sheet);
                 return false;
             }
-            // celldata can be undefined or should be an array
             if (sheet.celldata !== undefined && !Array.isArray(sheet.celldata)) {
                 console.error('[SPREADSHEET] Sheet celldata is not an array:', sheet);
                 return false;
             }
         }
 
-        console.log('[SPREADSHEET] Data validation passed');
         return true;
     }
 
@@ -906,8 +877,10 @@ class SpreadsheetManager {
     showLoading() {
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
-            loadingOverlay.style.display = 'flex';
             loadingOverlay.classList.remove('hidden');
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.pointerEvents = 'auto';
         }
     }
 
@@ -922,22 +895,6 @@ class SpreadsheetManager {
             loadingOverlay.classList.add('hidden');
             loadingOverlay.style.opacity = '0';
             loadingOverlay.style.pointerEvents = 'none';
-            console.log('[SPREADSHEET] Loading overlay hidden');
-        }
-    }
-
-    /**
-     * Show loading state
-     * Display loading overlay
-     */
-    showLoading() {
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        if (loadingOverlay) {
-            loadingOverlay.classList.remove('hidden');
-            loadingOverlay.style.display = 'flex';
-            loadingOverlay.style.opacity = '1';
-            loadingOverlay.style.pointerEvents = 'auto';
-            console.log('[SPREADSHEET] Loading overlay shown');
         }
     }
 
@@ -1003,13 +960,47 @@ class SpreadsheetManager {
 
             if (success) {
                 this.currentSpreadsheetMetadata = metadata;
-                console.log('[SPREADSHEET] Metadata saved successfully');
             }
 
             return success;
         } catch (error) {
             console.error('[SPREADSHEET] Error saving metadata:', error);
             return false;
+        }
+    }
+
+    /**
+     * Update shared copy asynchronously (non-blocking)
+     * This allows the main save to complete quickly while shared copy updates in background
+     * @param {object} spreadsheetData - Complete spreadsheet data to update shared copy with
+     */
+    async updateSharedCopy(spreadsheetData) {
+        if (!spreadsheetData.sharedId) {
+            console.warn('[SPREADSHEET] No sharedId found, skipping shared copy update');
+            return;
+        }
+
+        try {
+            const shareData = {
+                spreadsheet: spreadsheetData,
+                sharedAt: new Date().toISOString()
+            };
+
+            const response = await fetch(`https://textdb.dev/api/data/shared_${spreadsheetData.sharedId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(shareData)
+            });
+
+            if (!response.ok) {
+                console.error('[SPREADSHEET] Failed to update shared copy, status:', response.status);
+            }
+        } catch (e) {
+            console.error('[SPREADSHEET] Error updating shared copy:', e);
+            throw e;
         }
     }
 }

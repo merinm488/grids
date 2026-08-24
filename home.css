@@ -89,9 +89,12 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background-color: color-mix(in srgb, var(--bg-primary) 80%, transparent);
-    backdrop-filter: blur(12px);
+    background-color: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .home-header {
+    background-color: var(--bg-secondary);
 }
 
 .home-header-content {
@@ -552,6 +555,108 @@
     background-color: #b91c1c;
 }
 
+.home-confirm-rename-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 500;
+}
+
+.home-confirm-rename-btn:hover {
+    background-color: var(--accent-hover);
+}
+
+/* Rename Modal Input Styles */
+#renameInput {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    outline: none;
+    transition: all 0.2s ease;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin-bottom: 1rem;
+}
+
+#renameInput:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+#renameInput::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Additional utility styles for modals */
+.label-text {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+/* Utility classes */
+.block {
+    display: block;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.font-medium {
+    font-weight: 500;
+}
+
+.border-gray-300 {
+    border-color: var(--border-color);
+}
+
+.dark\:border-gray-600:has(*)) {
+    /* Already handled by CSS variables */
+}
+
+.bg-gray-50 {
+    background-color: var(--bg-tertiary);
+}
+
+.dark\:bg-gray-700:has(*)) {
+    /* Already handled by CSS variables */
+}
+
+.text-gray-900 {
+    color: var(--text-primary);
+}
+
+.dark\:text-gray-100:has(*)) {
+    /* Already handled by CSS variables */
+}
+
+.focus\:outline-none:focus {
+    outline: none;
+}
+
+.focus\:ring-2:focus {
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.focus\:ring-green-500:focus {
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
 .text-gray-600 {
     color: var(--text-secondary);
 }
@@ -641,6 +746,128 @@
 
     .spreadsheet-card-actions {
         opacity: 1;
+    }
+
+    /* Ensure solid background on mobile for settings dropdown */
+    .settings-dropdown {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1px solid #e5e5e5 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        position: absolute !important;
+        z-index: 99999 !important;
+    }
+
+    .settings-dropdown.active {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* Ensure solid background for theme submenu */
+    .theme-submenu {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1px solid #e5e5e5 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        position: absolute !important;
+        z-index: 100000 !important;
+    }
+
+    .theme-submenu.active {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* Dark theme overrides */
+    [data-theme="dark"] .settings-dropdown {
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        border-color: #2a2a2a !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    [data-theme="dark"] .theme-submenu {
+        background-color: #1a1a1a !important;
+        background: #1a1a1a !important;
+        border-color: #2a2a2a !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* Ensure dropdown items have proper contrast */
+    .settings-dropdown-item {
+        background-color: transparent !important;
+    }
+
+    [data-theme="dark"] .settings-dropdown-item {
+        color: #e5e5e5 !important;
+    }
+
+    [data-theme="light"] .settings-dropdown-item {
+        color: #1a1a1a !important;
+    }
+
+    /* Ensure theme options have proper contrast */
+    .theme-option {
+        background-color: transparent !important;
+    }
+
+    [data-theme="dark"] .theme-option {
+        color: #e5e5e5 !important;
+    }
+
+    [data-theme="light"] .theme-option {
+        color: #1a1a1a !important;
+    }
+
+    /* Ensure dropdown items have proper hover states */
+    [data-theme="dark"] .settings-dropdown-item:hover {
+        background-color: #14532d !important;
+        color: #22c55e !important;
+    }
+
+    [data-theme="light"] .settings-dropdown-item:hover {
+        background-color: #dcfce7 !important;
+        color: #22c55e !important;
+    }
+
+    /* Ensure theme options have proper hover states */
+    [data-theme="dark"] .theme-option:hover {
+        background-color: #14532d !important;
+        color: #22c55e !important;
+    }
+
+    [data-theme="light"] .theme-option:hover {
+        background-color: #dcfce7 !important;
+        color: #22c55e !important;
+    }
+
+    /* Mobile: position theme submenu below parent instead of to the right */
+    .theme-submenu {
+        top: 100% !important;
+        right: auto !important;
+        left: 0 !important;
+        margin-right: 0 !important;
+        margin-top: 4px !important;
+        transform: translateY(10px) !important;
+    }
+
+    .theme-submenu.active {
+        transform: translateY(0) !important;
+    }
+
+    /* Ensure dropdown items have solid backgrounds */
+    .settings-dropdown-item {
+        background-color: #ffffff !important;
+        color: #1a1a1a !important;
+    }
+
+    [data-theme="dark"] .settings-dropdown-item {
+        background-color: #1a1a1a !important;
+        color: #e5e5e5 !important;
     }
 }
 
@@ -879,6 +1106,163 @@
 
 #deleteModal .key-modal-content {
     max-width: 400px;
+}
+
+/* ================================================
+   Delete Account Modal Styles
+   ================================================ */
+
+#deleteAccountModal .key-modal-content {
+    max-width: 450px;
+}
+
+#deleteAccountModal .key-modal-body p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+#deleteAccountModal .key-modal-body ul {
+    margin: 0 0 16px 0;
+    padding-left: 20px;
+}
+
+#deleteAccountModal .key-modal-body ul li {
+    margin: 8px 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.home-cancel-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.home-cancel-btn:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+[data-theme="dark"] .home-cancel-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .home-cancel-btn:hover {
+    background-color: var(--accent-light);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.home-confirm-delete-btn {
+    background-color: var(--accent-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.home-confirm-delete-btn:hover {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.home-confirm-delete-btn:active {
+    transform: translateY(0);
+}
+
+.home-confirm-delete-account-btn {
+    background-color: #dc2626;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.home-confirm-delete-account-btn:hover {
+    background-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.home-confirm-delete-account-btn:active {
+    transform: translateY(0);
+}
+
+/* ================================================
+   Text Color Utilities for Delete Account
+   ================================================ */
+
+.text-red-600 {
+    color: #dc2626;
+}
+
+[data-theme="dark"] .text-red-600 {
+    color: #ef4444;
+}
+
+.dark\:text-red-400 {
+    color: #f87171;
+}
+
+.text-gray-600 {
+    color: #4b5563;
+}
+
+[data-theme="dark"] .text-gray-600 {
+    color: #9ca3af;
+}
+
+.dark\:text-gray-400 {
+    color: #9ca3af;
+}
+
+.mb-4 {
+    margin-bottom: 16px;
+}
+
+.list-disc {
+    list-style-type: disc;
+}
+
+.pl-5 {
+    padding-left: 20px;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.flex {
+    display: flex;
+}
+
+.gap-3 {
+    gap: 12px;
+}
+
+.justify-end {
+    justify-content: flex-end;
 }
 
 /* ================================================

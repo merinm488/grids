@@ -156,7 +156,7 @@ class ThemeManager {
             this.updateToggleButtonState();
         }
         else {
-            console.log('error in setting theme')
+            console.error('[THEME] Invalid theme name:', themeName);
             return;
         }
     }

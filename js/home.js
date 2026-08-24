@@ -41,6 +41,11 @@ class GridsHome {
                 this.setupSettingsMenu();
             }
 
+            // Add resize listener to update theme text on window resize
+            window.addEventListener('resize', () => {
+                this.updateThemeIndicator();
+            });
+
             // Update theme indicator
             this.updateThemeIndicator();
 
@@ -150,9 +155,7 @@ class GridsHome {
         card.className = 'spreadsheet-card';
         card.dataset.id = spreadsheet.id;
 
-        const createdAt = new Date(spreadsheet.createdAt);
         const updatedAt = new Date(spreadsheet.updatedAt);
-        const isRecentlyUpdated = (Date.now() - updatedAt.getTime()) < 86400000; // 24 hours
 
         card.innerHTML = `
             <div class="spreadsheet-card-header">
@@ -180,7 +183,7 @@ class GridsHome {
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>${isRecentlyUpdated ? 'Today' : this.formatDate(updatedAt)}</span>
+                    <span>${this.formatDate(updatedAt)}</span>
                 </div>
             </div>
         `;
@@ -277,6 +280,36 @@ class GridsHome {
             confirmDelete.addEventListener('click', () => this.confirmDeleteSpreadsheet());
         }
 
+        // Rename modal events
+        const renameModalClose = document.getElementById('renameModalClose');
+        const cancelRename = document.getElementById('cancelRename');
+        const confirmRename = document.getElementById('confirmRename');
+        const renameInput = document.getElementById('renameInput');
+
+        if (renameModalClose) {
+            renameModalClose.addEventListener('click', () => this.hideRenameModal());
+        }
+
+        if (cancelRename) {
+            cancelRename.addEventListener('click', () => this.hideRenameModal());
+        }
+
+        if (confirmRename) {
+            confirmRename.addEventListener('click', () => this.confirmRenameSpreadsheet());
+        }
+
+        // Handle Enter key in rename input
+        if (renameInput) {
+            renameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.confirmRenameSpreadsheet();
+                } else if (e.key === 'Escape') {
+                    this.hideRenameModal();
+                }
+            });
+        }
+
         // Close modal on outside click
         const deleteModal = document.getElementById('deleteModal');
         if (deleteModal) {
@@ -287,10 +320,19 @@ class GridsHome {
             });
         }
 
+        // Close rename modal on outside click
+        const renameModal = document.getElementById('renameModal');
+        if (renameModal) {
+            renameModal.addEventListener('click', (e) => {
+                if (e.target === renameModal) {
+                    this.hideRenameModal();
+                }
+            });
+        }
+
         // Reload spreadsheets when page becomes visible again
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden && document.visibilityState === 'visible') {
-                console.log('[HOME] Page became visible, reloading spreadsheets');
                 this.loadSpreadsheets();
             }
         });
@@ -392,6 +434,41 @@ class GridsHome {
             });
         }
 
+        // Delete account button
+        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+        if (deleteAccountBtn) {
+            deleteAccountBtn.addEventListener('click', () => {
+                this.showDeleteAccountModal();
+            });
+        }
+
+        // Delete account modal events
+        const deleteAccountModalClose = document.getElementById('deleteAccountModalClose');
+        const cancelDeleteAccount = document.getElementById('cancelDeleteAccount');
+        const confirmDeleteAccount = document.getElementById('confirmDeleteAccount');
+
+        if (deleteAccountModalClose) {
+            deleteAccountModalClose.addEventListener('click', () => this.hideDeleteAccountModal());
+        }
+
+        if (cancelDeleteAccount) {
+            cancelDeleteAccount.addEventListener('click', () => this.hideDeleteAccountModal());
+        }
+
+        if (confirmDeleteAccount) {
+            confirmDeleteAccount.addEventListener('click', () => this.confirmDeleteAccount());
+        }
+
+        // Close delete account modal on outside click
+        const deleteAccountModal = document.getElementById('deleteAccountModal');
+        if (deleteAccountModal) {
+            deleteAccountModal.addEventListener('click', (e) => {
+                if (e.target === deleteAccountModal) {
+                    this.hideDeleteAccountModal();
+                }
+            });
+        }
+
         // Update theme indicator
         this.updateThemeIndicator();
     }
@@ -460,9 +537,7 @@ class GridsHome {
      * Open spreadsheet in editor
      */
     openSpreadsheet(id) {
-        // Show loading state immediately for better UX
-        this.showLoading();
-        // Navigate to spreadsheet
+        // Navigate to spreadsheet (the destination page will show its own loading)
         window.location.href = `/index.html?id=${id}`;
     }
 
@@ -506,39 +581,89 @@ class GridsHome {
     }
 
     /**
-     * Rename spreadsheet
+     * Show rename modal
      */
-    async renameSpreadsheet(spreadsheet) {
-        const newName = prompt('Enter new name:', spreadsheet.name || 'Untitled');
+    showRenameModal(spreadsheet) {
+        const renameModal = document.getElementById('renameModal');
+        const renameInput = document.getElementById('renameInput');
+        const deleteSheetName = document.getElementById('deleteSheetName');
 
-        if (newName === null || newName.trim() === '') {
-            return; // Cancelled or empty
+        if (renameInput) {
+            renameInput.value = spreadsheet.name || 'Untitled Spreadsheet';
         }
+
+        if (renameModal) {
+            renameModal.classList.add('active');
+        }
+
+        // Store the spreadsheet being renamed
+        this.spreadsheetToRename = spreadsheet;
+
+        // Focus input and select text
+        if (renameInput) {
+            setTimeout(() => {
+                renameInput.focus();
+                renameInput.select();
+            }, 100);
+        }
+    }
+
+    /**
+     * Hide rename modal
+     */
+    hideRenameModal() {
+        const renameModal = document.getElementById('renameModal');
+        if (renameModal) {
+            renameModal.classList.remove('active');
+        }
+        this.spreadsheetToRename = null;
+    }
+
+    /**
+     * Confirm rename spreadsheet
+     */
+    async confirmRenameSpreadsheet() {
+        if (!this.spreadsheetToRename) return;
+
+        const renameInput = document.getElementById('renameInput');
+        const newName = renameInput ? renameInput.value.trim() : '';
+
+        if (!newName) {
+            this.showError('Name cannot be empty');
+            return;
+        }
+
+        // Store the ID before hiding the modal
+        const spreadsheetId = this.spreadsheetToRename.id;
+        const originalSpreadsheet = { ...this.spreadsheetToRename };
 
         try {
             // Update local state immediately (optimistic update)
             const updatedSpreadsheet = {
-                ...spreadsheet,
-                name: newName.trim(),
+                ...this.spreadsheetToRename,
+                name: newName,
                 updatedAt: new Date().toISOString()
             };
 
             // Update local state
-            const index = this.spreadsheets.findIndex(s => s.id === spreadsheet.id);
+            const index = this.spreadsheets.findIndex(s => s.id === spreadsheetId);
             if (index !== -1) {
                 this.spreadsheets[index] = updatedSpreadsheet;
             }
             this.filteredSpreadsheets = [...this.spreadsheets];
             this.renderSpreadsheets();
 
+            // Hide modal and clear the reference
+            this.hideRenameModal();
+
             // Save to storage in background
-            const success = await gridsStorage.saveSpreadsheet(spreadsheet.id, updatedSpreadsheet);
+            const success = await gridsStorage.saveSpreadsheet(spreadsheetId, updatedSpreadsheet);
 
             if (!success) {
                 // Rollback on failure
-                const rollbackIndex = this.spreadsheets.findIndex(s => s.id === spreadsheet.id);
+                const rollbackIndex = this.spreadsheets.findIndex(s => s.id === spreadsheetId);
                 if (rollbackIndex !== -1) {
-                    this.spreadsheets[rollbackIndex] = spreadsheet;
+                    this.spreadsheets[rollbackIndex] = originalSpreadsheet;
                 }
                 this.filteredSpreadsheets = [...this.spreadsheets];
                 this.renderSpreadsheets();
@@ -550,6 +675,13 @@ class GridsHome {
             console.error('[HOME] Failed to rename spreadsheet:', error);
             this.showError('Failed to rename spreadsheet');
         }
+    }
+
+    /**
+     * Rename spreadsheet
+     */
+    async renameSpreadsheet(spreadsheet) {
+        this.showRenameModal(spreadsheet);
     }
 
     /**
@@ -652,7 +784,12 @@ class GridsHome {
                 themeDisplayName = currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1);
             }
 
-            themeText.textContent = `Theme: ${themeDisplayName}`;
+            // On mobile devices, show just "Theme" to fit on one line
+            if (window.innerWidth <= 640) {
+                themeText.textContent = 'Theme';
+            } else {
+                themeText.textContent = `Theme: ${themeDisplayName}`;
+            }
 
             // Update active state on theme options
             const themeOptions = document.querySelectorAll('.theme-option');
@@ -762,6 +899,58 @@ class GridsHome {
         }
     }
 
+    /**
+     * Show delete account confirmation modal
+     */
+    showDeleteAccountModal() {
+        const deleteAccountModal = document.getElementById('deleteAccountModal');
+        const settingsDropdown = document.getElementById('settingsDropdown');
+
+        if (deleteAccountModal) {
+            deleteAccountModal.classList.add('active');
+        }
+
+        // Close settings dropdown
+        if (settingsDropdown) {
+            settingsDropdown.classList.remove('active');
+        }
+    }
+
+    /**
+     * Hide delete account confirmation modal
+     */
+    hideDeleteAccountModal() {
+        const deleteAccountModal = document.getElementById('deleteAccountModal');
+        if (deleteAccountModal) {
+            deleteAccountModal.classList.remove('active');
+        }
+    }
+
+    /**
+     * Confirm and delete account
+     */
+    async confirmDeleteAccount() {
+        try {
+            if (authManager) {
+                const result = await authManager.deleteAccount();
+
+                if (result.success) {
+                    // The authManager handles the redirect
+                } else {
+                    this.showError(result.error || 'Failed to delete account');
+                    this.hideDeleteAccountModal();
+                }
+            } else {
+                this.showError('Authentication manager not available');
+                this.hideDeleteAccountModal();
+            }
+        } catch (error) {
+            console.error('[HOME] Delete account error:', error);
+            this.showError('Failed to delete account');
+            this.hideDeleteAccountModal();
+        }
+    }
+
     // ================================================
     // Notifications
     // ================================================
@@ -831,18 +1020,38 @@ class GridsHome {
     // ================================================
 
     /**
-     * Format date for display
+     * Format date for display with relative time
+     * Shows: Just now, Xm ago, Xh ago, Yesterday, or date
      */
     formatDate(date) {
         const now = new Date();
         const diff = now - date;
-        const days = Math.floor(diff / 86400000);
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
 
-        if (days === 0) return 'Today';
-        if (days === 1) return 'Yesterday';
-        if (days < 7) return `${days} days ago`;
-        if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-        if (days < 365) return `${Math.floor(days / 30)} months ago`;
+        // Less than 1 minute
+        if (seconds < 60) {
+            return 'Just now';
+        }
+
+        // Less than 1 hour
+        if (minutes < 60) {
+            return `${minutes}m ago`;
+        }
+
+        // Less than 24 hours
+        if (hours < 24) {
+            return `${hours}h ago`;
+        }
+
+        // Yesterday
+        if (days === 1) {
+            return 'Yesterday';
+        }
+
+        // Beyond yesterday - show date
         return date.toLocaleDateString();
     }
 
@@ -867,10 +1076,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if ('serviceWorker' in navigator) {
         try {
             const registrations = await navigator.serviceWorker.getRegistrations();
-            console.log('[HOME] Cleaning up service workers:', registrations.length);
             for (const registration of registrations) {
                 await registration.unregister();
-                console.log('[HOME] Unregistered service worker:', registration.scope);
             }
         } catch (swError) {
             console.warn('[HOME] Service worker cleanup error:', swError);

@@ -45,13 +45,6 @@ class GridsStorage {
             return false;
         }
 
-        console.log('[STORAGE] Saving spreadsheet with ID:', spreadsheetId);
-        console.log('[STORAGE] Spreadsheet data ID:', spreadsheetData?.id);
-        console.log('[STORAGE] ID match:', spreadsheetId === spreadsheetData?.id);
-
-        // Add cache-busting to avoid service worker interference
-        const cacheBuster = `&_t=${Date.now()}_${Math.random().toString(36).substring(2)}`;
-
         try {
             const response = await fetch(`${this.apiEndpoint}?${new URLSearchParams({ _cacheBust: Date.now() })}`, {
                 method: 'PUT',
@@ -73,19 +66,6 @@ class GridsStorage {
             });
 
             const result = await response.json();
-            console.log('[STORAGE] Save result:', result.success);
-            console.log('[STORAGE] Total spreadsheets after save:', result.data?.spreadsheets?.length);
-
-            // Verify the save worked correctly
-            if (result.success && result.data?.spreadsheets) {
-                const savedSpreadsheet = result.data.spreadsheets.find(s => s.id === spreadsheetId);
-                if (!savedSpreadsheet) {
-                    console.error('[STORAGE] Save reported success but spreadsheet not found in data!');
-                    return false;
-                }
-                console.log('[STORAGE] Verified spreadsheet saved:', savedSpreadsheet.name);
-            }
-
             return result.success;
         } catch (error) {
             console.error('[STORAGE] Save error:', error);
@@ -117,7 +97,6 @@ class GridsStorage {
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('[STORAGE] Loaded user data:', result);
                 return result.success ? result.data : null;
             } else {
                 console.error('[STORAGE] Load failed:', response.status);
@@ -135,9 +114,7 @@ class GridsStorage {
      * @returns {Promise<object|null>} Spreadsheet data
      */
     async getSpreadsheet(spreadsheetId) {
-        console.log('[STORAGE] Getting spreadsheet:', spreadsheetId);
         const userData = await this.loadUserData();
-        console.log('[STORAGE] User data:', userData);
 
         if (!userData || !userData.spreadsheets) {
             console.error('[STORAGE] No user data or spreadsheets found');
@@ -145,12 +122,6 @@ class GridsStorage {
         }
 
         const spreadsheet = userData.spreadsheets.find(s => s.id === spreadsheetId);
-        if (spreadsheet) {
-            console.log('[STORAGE] Found spreadsheet:', spreadsheet.name);
-        } else {
-            console.error('[STORAGE] Spreadsheet not found:', spreadsheetId);
-        }
-
         return spreadsheet || null;
     }
 
@@ -169,6 +140,7 @@ class GridsStorage {
 
     /**
      * Delete spreadsheet from user data
+     * Also deletes the shared copy if one exists
      * @param {string} spreadsheetId - Spreadsheet ID to delete
      * @returns {Promise<boolean>} Success status
      */
@@ -180,6 +152,9 @@ class GridsStorage {
         }
 
         try {
+            // First, get the spreadsheet to check if it has a shared copy
+            const spreadsheet = await this.getSpreadsheet(spreadsheetId);
+
             const response = await fetch(this.apiEndpoint, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -193,6 +168,12 @@ class GridsStorage {
             });
 
             const result = await response.json();
+
+            // If deletion successful and spreadsheet had a shared copy, delete it too
+            if (result.success && spreadsheet?.sharedId) {
+                await this.deleteSharedSpreadsheet(spreadsheet.sharedId);
+            }
+
             return result.success;
         } catch (error) {
             console.error('[STORAGE] Delete error:', error);
@@ -247,6 +228,204 @@ class GridsStorage {
         }
 
         return userData.settings;
+    }
+
+    // ================================================
+    // Share Functionality
+    // ================================================
+
+    /**
+     * Share a spreadsheet
+     * @param {string} spreadsheetId - Spreadsheet ID to share
+     * @returns {Promise<object|null>} Share result with shareUrl and alreadyShared flag
+     */
+    async shareSpreadsheet(spreadsheetId) {
+        const hash = this.getUserHash();
+        if (!hash) {
+            console.error('[STORAGE] No user hash found');
+            return null;
+        }
+
+        try {
+            // First, get the current spreadsheet data to check if already shared
+            const userData = await this.loadUserData();
+            if (!userData || !userData.spreadsheets) {
+                console.error('[STORAGE] No user data found');
+                return null;
+            }
+
+            const spreadsheet = userData.spreadsheets.find(s => s.id === spreadsheetId);
+            if (!spreadsheet) {
+                console.error('[STORAGE] Spreadsheet not found:', spreadsheetId);
+                return null;
+            }
+
+            // Check if already shared
+            if (spreadsheet.sharedId) {
+                const existingShareId = spreadsheet.sharedId;
+
+                // Get base URL
+                const baseUrl = this.getBaseUrl();
+                return {
+                    shareId: existingShareId,
+                    shareUrl: `${baseUrl}/shared.html?shared=${existingShareId}`,
+                    alreadyShared: true
+                };
+            }
+
+            // Generate new share ID
+            const newShareId = this.generateId();
+
+            // Prepare share data
+            const shareData = {
+                spreadsheet: spreadsheet,
+                sharedAt: new Date().toISOString()
+            };
+
+            // Store shared spreadsheet in textdb.dev
+            const textdbResponse = await fetch(`https://textdb.dev/api/data/shared_${newShareId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(shareData)
+            });
+
+            if (!textdbResponse.ok) {
+                console.error('[STORAGE] Failed to save shared spreadsheet to textdb.dev');
+                return null;
+            }
+
+            // Update spreadsheet with sharedId
+            spreadsheet.sharedId = newShareId;
+
+            // Save updated user data
+            const saveResponse = await fetch(this.apiEndpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    hash: hash,
+                    action: 'updateSpreadsheet',
+                    data: {
+                        spreadsheetId: spreadsheetId,
+                        spreadsheetData: spreadsheet
+                    }
+                })
+            });
+
+            const saveResult = await saveResponse.json();
+            if (!saveResult.success) {
+                console.error('[STORAGE] Failed to update spreadsheet with sharedId');
+                return null;
+            }
+
+            // Get base URL and return share info
+            const baseUrl = this.getBaseUrl();
+            const shareUrl = `${baseUrl}/shared.html?shared=${newShareId}`;
+
+            return {
+                shareId: newShareId,
+                shareUrl: shareUrl,
+                alreadyShared: false
+            };
+
+        } catch (error) {
+            console.error('[STORAGE] Share error:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Get shared spreadsheet from textdb.dev
+     * @param {string} shareId - Share ID
+     * @returns {Promise<object|null>} Shared spreadsheet data
+     */
+    async getSharedSpreadsheet(shareId) {
+        try {
+            const response = await fetch(`https://textdb.dev/api/data/shared_${shareId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const text = await response.text();
+
+            // Check for empty or invalid content
+            if (!text || text.trim() === '' || text.includes('hello world from textdb') || text.length < 10) {
+                return null;
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(text);
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
+            } catch (parseError) {
+                console.error('[STORAGE] JSON parse error:', parseError);
+                return null;
+            }
+
+            // Validate structure
+            if (!parsed || typeof parsed !== 'object' || !parsed.spreadsheet) {
+                return null;
+            }
+
+            return parsed;
+
+        } catch (error) {
+            console.error('[STORAGE] Get shared spreadsheet error:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Delete shared spreadsheet from textdb.dev
+     * @param {string} shareId - Share ID to delete
+     * @returns {Promise<boolean>} Success status
+     */
+    async deleteSharedSpreadsheet(shareId) {
+        try {
+            // Send null to delete
+            const response = await fetch(`https://textdb.dev/api/data/shared_${shareId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(null)
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error('[STORAGE] Delete shared spreadsheet error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Generate unique ID for sharing
+     * @returns {string} Unique ID
+     */
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    }
+
+    /**
+     * Get base URL for share links
+     * @returns {string} Base URL
+     */
+    getBaseUrl() {
+        // Determine base URL from current location
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        return `${protocol}//${host}`;
     }
 
     // ================================================

@@ -61,7 +61,6 @@ class AuthenticationManager {
             const isValid = await this.verifySession();
 
             if (isValid) {
-                console.log('[AUTH] Session restored successfully');
                 // Redirect to home page if on login page
                 if (window.location.pathname === '/auth.html' || window.location.pathname.endsWith('auth.html')) {
                     window.location.href = '/home.html';
@@ -122,7 +121,6 @@ class AuthenticationManager {
 
             // If login fails (user not found), try creating account
             if (!loginResult.success && loginResult.error === 'User not found') {
-                console.log('[AUTH] User not found, creating account...');
                 return await this.createAccount(normalizedKey);
             }
 
