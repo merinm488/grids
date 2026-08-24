@@ -1,16 +1,37 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
-      "source": "/",
-      "destination": "/auth.html"
+      "handle": "filesystem"
     },
     {
-      "source": "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      "destination": "/index.html"
+      "src": "/home.html",
+      "dest": "/home.html"
+    },
+    {
+      "src": "/shared.html",
+      "dest": "/shared.html"
+    },
+    {
+      "src": "/index.html",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/",
+      "dest": "/auth.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/auth.html"
     }
   ],
   "headers": [
