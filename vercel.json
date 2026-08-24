@@ -1,12 +1,22 @@
 {
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "src": "package.json",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
-      "source": "/((?!api|_next/static|_next/image|favicon.ico).*)",
-      "destination": "/auth.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/auth.html"
     }
   ],
   "headers": [
