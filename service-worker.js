@@ -1,4 +1,4 @@
-const CACHE_NAME = 'grids-spreadsheet-v2';
+const CACHE_NAME = 'grids-spreadsheet-v3';
 const urlsToCache = [
   '/',
   '/home.html',
@@ -21,9 +21,9 @@ const urlsToCache = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
-const STATIC_CACHE = 'grids-static-v1';
-const DYNAMIC_CACHE = 'grids-dynamic-v1';
-const API_CACHE = 'grids-api-v1';
+const STATIC_CACHE = 'grids-static-v2';
+const DYNAMIC_CACHE = 'grids-dynamic-v2';
+const API_CACHE = 'grids-api-v2';
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
