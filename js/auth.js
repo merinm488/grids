@@ -62,7 +62,7 @@ class AuthenticationManager {
 
             if (isValid) {
                 // Redirect to home page if on login page
-                if (window.location.pathname === '/auth.html' || window.location.pathname.endsWith('auth.html')) {
+                if (window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname.endsWith('index.html')) {
                     window.location.href = '/home.html';
                 }
             } else {
@@ -251,8 +251,8 @@ class AuthenticationManager {
             keysToRemove.forEach(key => localStorage.removeItem(key));
 
             // Redirect to login page
-            if (window.location.pathname !== '/auth.html') {
-                window.location.href = '/auth.html';
+            if (window.location.pathname !== '/') {
+                window.location.href = '/';
             }
 
             return {
@@ -295,7 +295,7 @@ class AuthenticationManager {
                 this.userKey = null;
 
                 // Redirect to login page
-                window.location.href = '/auth.html';
+                window.location.href = '/';
 
                 return {
                     success: true,

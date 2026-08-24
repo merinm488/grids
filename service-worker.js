@@ -1,9 +1,8 @@
-const CACHE_NAME = 'grids-spreadsheet-v1';
+const CACHE_NAME = 'grids-spreadsheet-v2';
 const urlsToCache = [
   '/',
   '/home.html',
-  '/index.html',
-  '/auth.html',
+  '/editor.html',
   '/shared.html',
   '/styles.css',
   '/home.css',
@@ -36,7 +35,7 @@ self.addEventListener('install', (event) => {
         return cache.addAll([
           '/',
           '/home.html',
-          '/auth.html',
+          '/editor.html',
           '/styles.css',
           '/home.css',
           '/auth.css',

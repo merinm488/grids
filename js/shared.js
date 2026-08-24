@@ -209,7 +209,7 @@ class SharedSpreadsheet {
         if (window.history.length > 1) {
             window.history.back();
         } else {
-            window.location.href = '/auth.html';
+            window.location.href = '/';
         }
     }
 }

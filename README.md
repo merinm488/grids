@@ -38,6 +38,10 @@ A modern, responsive spreadsheet application built with Luckysheet, featuring Ex
   - Touch-friendly interface
   - Adaptive layout for all screen sizes
 
+- 🔗 **Easy Sharing**
+  - Generate shareable links for spreadsheets
+  - Public read-only access
+  - No authentication required for shared sheets
 
 ## Authentication System
 
@@ -56,137 +60,126 @@ The hashing process uses **pepper hashing** for enhanced security:
 
 ```
 1. rawKey → SHA-256 → initialHash
-2. pepperName + ":" + initialHash → pepperedInput  
+2. pepperName + ":" + initialHash → pepperedInput
 3. pepperedInput → SHA-256 → finalHash
 4. finalHash → Base64 → storedKey
 ```
 
+## Application Structure & Navigation
 
+### URL Routes
 
-### Authentication Files
+- **`/`** → Login page (index.html)
+- **`/home.html`** → Dashboard with all spreadsheets
+- **`/editor.html?id=<sheetId>`** → Spreadsheet editor
+- **`/shared.html?shared=<shareId>`** → Public shared spreadsheet viewer
 
-- **auth.html**: Login page with modern UI
-- **auth.css**: Styling for login interface
-- **js/crypto-utils.js**: Secure hashing utilities
-- **js/auth.js**: Authentication manager
-- **js/login-handler.js**: Login UI interactions
+### Navigation Flow
 
-### Key Features
-
-- ✅ No format restrictions on access keys (only checks if empty)
-- ✅ Automatic account creation for new keys
-- ✅ Session persistence across browser sessions
-- ✅ Auto-redirect to login if not authenticated
-- ✅ Secure client-side hashing (development mode)
-- ✅ Ready for server-side implementation (production)
+```
+User visits app → Redirected to login (/)
+    ↓
+Enter access key → Authenticate
+    ↓
+Success → Redirect to dashboard (/home.html)
+    ↓
+Click spreadsheet card → Open editor (/editor.html?id=<sheetId>)
+    ↓
+Click Share button → Generate link (/shared.html?shared=<shareId>)
+```
 
 ## Project Structure
 
 ```
 grids/
-├── index.html          # Main HTML file with auth check
-├── auth.html           # Login page
+├── index.html          # Login page (main entry point)
+├── editor.html         # Spreadsheet editor
+├── home.html           # User dashboard
+├── shared.html         # Public shared spreadsheet viewer
+├── styles.css          # Main application styles
+├── home.css            # Dashboard styles
 ├── auth.css            # Login page styles
-├── styles.css          # Application styles with theme variables
 ├── vercel.json         # Vercel deployment configuration
+├── manifest.json       # PWA manifest
+├── service-worker.js   # PWA service worker
 ├── config/
 │   └── config.js       # Application configuration
 ├── js/
-│   ├── app.js          # Main application entry point ✅
-│   ├── auth.js         # Authentication manager ✅
-│   ├── crypto-utils.js # Cryptographic utilities ✅
-│   ├── login-handler.js # Login UI handler ✅
-│   ├── spreadsheet.js  # Spreadsheet operations ✅
-│   ├── storage.js      # Data persistence layer ✅
-│   └── themes.js       # Theme management ✅
+│   ├── app.js          # Main application (editor page)
+│   ├── auth.js         # Authentication manager
+│   ├── login-handler.js # Login form handler
+│   ├── home.js         # Dashboard functionality
+│   ├── shared.js       # Shared spreadsheet viewer
+│   ├── spreadsheet.js  # Luckysheet wrapper
+│   ├── storage.js      # Data persistence layer
+│   ├── themes.js       # Theme management
+│   └── pwa.js          # Progressive Web App
 ├── api/
-│   ├── auth/
-│   │   └── hash.js     # Server-side hashing endpoint ✅
-│   └── storage.js      # TextDB API endpoint ✅
-└── README.md           # This file
+│   ├── users.js        # Unified authentication & data API
+│   └── auth/
+│       └── hash.js     # Server-side hashing endpoint
+└── icons/              # Application icons
 ```
+
+## Deployment
+
+### Vercel Deployment
+
+The project is configured for Vercel deployment:
+
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
+}
+```
+
+### Key Features for Deployment
+
+- **Root URL serves login page**: `index.html` is served at `/`
+- **API routing**: All `/api/*` requests are proxied correctly
+- **Static file serving**: All HTML files, CSS, and JS are served directly
+- **No build process required**: Static files are ready for deployment
 
 ## Implementation Status
 
 ✅ **Fully Implemented:**
 - Authentication system with pepper hashing
 - Client-side and server-side key hashing
-- Session management with 30-day expiry
-- Theme management (light/dark modes)
+- Session management with sessionStorage
+- Theme management (light/dark/system modes)
 - Spreadsheet operations via Luckysheet
 - Data persistence (localStorage and TextDB)
-- Auto-save functionality
+- Auto-save functionality (every 30 seconds)
 - Import/Export (Excel, CSV)
 - Undo/Redo operations
 - Freeze rows/columns
 - Notification system
-- Keyboard shortcuts
+- Keyboard shortcuts (Ctrl+S to save)
 - API endpoints for Vercel deployment
+- Public spreadsheet sharing
+- PWA support with service worker
 
-### js/crypto-utils.js
-- ✅ HashAccessKey function
-- ✅ verifyAccessKey function
-- ✅ generateSessionToken function
-- ✅ Client-side hashing for development
-- ✅ Server-side hashing via API for production
+### Core JavaScript Modules
 
-### js/auth.js
-- ✅ AuthenticationManager class structure
-- ✅ User lookup and storage (localStorage for dev)
-- ✅ Session management
-- ✅ Login/logout functionality
-- ✅ Auto-redirect on authentication
-
-### js/login-handler.js
-- ✅ Complete form handling
-- ✅ Loading states and messages
-- ✅ Auto-redirect on success
-
-### config/config.js
-- ✅ Environment detection
-- ✅ Storage configuration
-- ✅ Spreadsheet options
-- ✅ API endpoints
-
-### js/storage.js
-- ✅ Local storage operations for development
-- ✅ TextDB API integration for production
-- ✅ User-specific data storage
-- ✅ Data validation and compression
-
-### js/themes.js
-- ✅ Theme initialization and switching
-- ✅ LocalStorage theme persistence
-- ✅ Luckysheet theme overrides
-- ✅ System theme detection support
-
-### js/spreadsheet.js
-- ✅ Luckysheet initialization
-- ✅ Data operations (load, save, export)
-- ✅ Sheet management
-- ✅ Formula execution
-- ✅ Chart operations
-- ✅ Import/Export functionality
-- ✅ Undo/Redo operations
-- ✅ Freeze rows/columns
-
-### js/app.js
-- ✅ Application initialization with auth check
-- ✅ Event handling
-- ✅ Auto-save functionality
-- ✅ URL handling
-- ✅ Unsaved changes detection
-- ✅ Logout functionality
-- ✅ Notification system
-- ✅ Keyboard shortcuts
-
-### API Endpoints (api/)
-- ✅ /api/auth/hash - Server-side key hashing
-- ✅ /api/storage - TextDB storage operations
+- **js/auth.js**: AuthenticationManager class, user lookup, session management
+- **js/login-handler.js**: Form handling, loading states, auto-redirect
+- **js/home.js**: Dashboard, spreadsheet cards, search, create/delete operations
+- **js/app.js**: Editor initialization, auto-save, event handling
+- **js/shared.js**: Read-only shared spreadsheet viewer
+- **js/storage.js**: Data persistence with localStorage and TextDB
+- **js/themes.js**: Theme switching and persistence
+- **js/spreadsheet.js**: Luckysheet wrapper and operations
 
 ## Keyboard Shortcuts
 
-When implemented:
 - `Ctrl+S` / `Cmd+S`: Save spreadsheet
 - `Ctrl+Z` / `Cmd+Z`: Undo
 - `Ctrl+Y` / `Cmd+Y` or `Cmd+Shift+Z`: Redo
@@ -197,7 +190,6 @@ When implemented:
 - Firefox (latest)
 - Safari (latest)
 - Mobile browsers (iOS Safari, Chrome Mobile)
-
 
 ## Contributing
 
@@ -210,8 +202,8 @@ MIT License - feel free to use this for your own projects.
 ## Credits
 
 - Built with [Luckysheet](https://github.com/mengshukeji/Luckysheet) - An excellent spreadsheet library
-- Icons from various open-source icon libraries
-- Fonts from system font stacks
+- Icons from SVG libraries
+- Fonts from Google Fonts (Inter)
 
 ## Support
 
@@ -220,11 +212,11 @@ For issues or questions:
 
 ## Roadmap
 
-Future enhancements (when JavaScript is implemented):
+Future enhancements:
 - [ ] Real-time collaboration
 - [ ] More chart types
 - [ ] Advanced formulas
 - [ ] Mobile app version
-- [ ] Offline support with PWA
+- [ ] Enhanced PWA features
 - [ ] Export to PDF
 - [ ] Custom functions

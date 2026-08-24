@@ -53,3 +53,6 @@ build/
 # *.xlsx
 # *.csv
 .vercel
+
+# Development database (user data storage)
+db/

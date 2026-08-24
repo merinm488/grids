@@ -856,7 +856,7 @@ class GridsApp {
         } catch (error) {
             console.error('Logout error:', error);
             // Force redirect even if logout fails
-            window.location.href = '/auth.html';
+            window.location.href = '/';
         }
     }
 

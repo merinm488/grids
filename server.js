@@ -128,7 +128,7 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Fallback for SPA routing
+// Fallback for SPA routing - serves login page
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

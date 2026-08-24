@@ -538,7 +538,7 @@ class GridsHome {
      */
     openSpreadsheet(id) {
         // Navigate to spreadsheet (the destination page will show its own loading)
-        window.location.href = `/index.html?id=${id}`;
+        window.location.href = `/editor.html?id=${id}`;
     }
 
     /**
@@ -890,12 +890,12 @@ class GridsHome {
                 // Fallback
                 sessionStorage.removeItem('grids_user_hash');
                 sessionStorage.removeItem('grids_user_key');
-                window.location.href = '/auth.html';
+                window.location.href = '/';
             }
         } catch (error) {
             console.error('[HOME] Logout error:', error);
             // Force redirect
-            window.location.href = '/auth.html';
+            window.location.href = '/';
         }
     }
 
