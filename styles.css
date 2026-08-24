@@ -7,36 +7,6 @@
    PWA Styles
    ================================================ */
 
-/* PWA Install Button */
-.pwa-install-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.875rem;
-    white-space: nowrap;
-}
-
-.pwa-install-btn:hover {
-    background: var(--accent-hover);
-    transform: translateY(-1px);
-}
-
-.pwa-install-btn:active {
-    transform: translateY(0);
-}
-
-.pwa-install-btn.hidden {
-    display: none;
-}
-
 /* PWA Update Notification */
 .pwa-update-notification,
 .pwa-success-notification {
