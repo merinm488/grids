@@ -2,7 +2,7 @@
   "name": "Grids - Modern Spreadsheet",
   "short_name": "Grids",
   "description": "Modern spreadsheet application with Excel-like features",
-  "start_url": "/home.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
