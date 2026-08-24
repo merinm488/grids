@@ -38,7 +38,6 @@ class PWAManager {
         });
 
         this.swRegistration = registration;
-        console.log('[PWA] Service Worker registered:', registration.scope);
 
         // Check for updates
         registration.addEventListener('updatefound', () => {
@@ -55,14 +54,13 @@ class PWAManager {
         // Request sync for background tasks
         if ('sync' in registration) {
           registration.sync.register('sync-spreadsheets').catch(err => {
-            console.log('[PWA] Sync registration failed:', err);
+            // Sync registration failed - not critical
           });
         }
 
         // Listen for messages from service worker
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data.type === 'SYNC_DATA') {
-            console.log('[PWA] Syncing data...');
             // Trigger data sync with your storage manager
             if (window.storageManager) {
               window.storageManager.syncData();
@@ -88,14 +86,10 @@ class PWAManager {
 
       // Store the event for later use
       this.deferredPrompt = e;
-
-      // Log that install prompt is available (no UI shown)
-      console.log('[PWA] Install prompt available');
     });
 
     // Handle successful installation
     window.addEventListener('appinstalled', () => {
-      console.log('[PWA] App installed successfully');
       this.deferredPrompt = null;
       this.showInstallSuccess();
     });
@@ -106,7 +100,6 @@ class PWAManager {
    */
   async promptInstall() {
     if (!this.deferredPrompt) {
-      console.log('[PWA] No install prompt available');
       return false;
     }
 
@@ -116,8 +109,6 @@ class PWAManager {
 
       // Wait for user response
       const { outcome } = await this.deferredPrompt.userChoice;
-
-      console.log('[PWA] Install prompt outcome:', outcome);
 
       // Clear the deferred prompt
       this.deferredPrompt = null;
@@ -199,10 +190,7 @@ class PWAManager {
   setupAppLifecycle() {
     // Handle visibility change
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        console.log('[PWA] App hidden');
-      } else {
-        console.log('[PWA] App visible');
+      if (!document.hidden) {
         // Refresh data when app becomes visible
         this.refreshData();
       }
@@ -210,19 +198,16 @@ class PWAManager {
 
     // Handle beforeunload
     window.addEventListener('beforeunload', () => {
-      console.log('[PWA] App closing');
       // Save any pending data
       this.savePendingData();
     });
 
     // Handle online/offline status
     window.addEventListener('online', () => {
-      console.log('[PWA] App online');
       this.showOnlineStatus();
     });
 
     window.addEventListener('offline', () => {
-      console.log('[PWA] App offline');
       this.showOfflineStatus();
     });
   }

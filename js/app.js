@@ -35,8 +35,7 @@ class GridsApp {
      */
     async init() {
         try {
-            // Starting initialization
-
+    
             // Initialize theme manager
             themeManager.init();
 

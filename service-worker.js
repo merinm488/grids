@@ -27,11 +27,9 @@ const API_CACHE = 'grids-api-v2';
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
-        console.log('[SW] Caching static assets');
         return cache.addAll([
           '/',
           '/home.html',
@@ -43,7 +41,6 @@ self.addEventListener('install', (event) => {
         ]);
       })
       .then(() => {
-        console.log('[SW] Static assets cached');
         return self.skipWaiting();
       })
   );
@@ -51,19 +48,16 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== API_CACHE) {
-            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('[SW] Service worker activated');
       return self.clients.claim();
     })
   );
@@ -114,7 +108,6 @@ self.addEventListener('fetch', (event) => {
 
         return response;
       }).catch((error) => {
-        console.log('[SW] Fetch failed:', error);
         // Return a custom offline page for HTML requests
         if (event.request.headers.get('accept').includes('text/html')) {
           return caches.match('/home.html');
@@ -126,7 +119,6 @@ self.addEventListener('fetch', (event) => {
 
 // Handle background sync for offline actions
 self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync:', event.tag);
   if (event.tag === 'sync-spreadsheets') {
     event.waitUntil(syncSpreadsheets());
   }
