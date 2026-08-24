@@ -1072,18 +1072,6 @@ class GridsHome {
 let gridsHome;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Unregister any service workers that might interfere
-    if ('serviceWorker' in navigator) {
-        try {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) {
-                await registration.unregister();
-            }
-        } catch (swError) {
-            console.warn('[HOME] Service worker cleanup error:', swError);
-        }
-    }
-
     gridsHome = new GridsHome();
     await gridsHome.init();
 

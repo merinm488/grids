@@ -1323,18 +1323,6 @@ class GridsApp {
  */
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Unregister any service workers that might interfere with API calls
-        if ('serviceWorker' in navigator) {
-            try {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (const registration of registrations) {
-                    await registration.unregister();
-                }
-            } catch (swError) {
-                console.warn('[APP] Service worker cleanup error:', swError);
-            }
-        }
-
         // Wait for Luckysheet to be available (CDN loading)
         let attempts = 0;
         const maxAttempts = 100; // 10 seconds timeout (more realistic for CDN)

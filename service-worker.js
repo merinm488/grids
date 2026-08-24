@@ -73,21 +73,18 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Handle API requests - network first, fall back to cache
+  // Handle API requests - NEVER cache, always go to network
+  // This prevents authentication issues in production
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Clone the response before caching
-          const responseToCache = response.clone();
-          caches.open(API_CACHE).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request);
-        })
+      fetch(event.request, {
+        // Important: Include credentials for authenticated requests
+        credentials: 'include',
+        // Don't cache API responses
+        cache: 'no-store',
+        // Ensure we don't use cached responses
+        redirect: 'follow'
+      })
     );
     return;
   }
