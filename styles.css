@@ -590,6 +590,7 @@ html, body {
     border-radius: 50%;
     background-color: transparent;
     transition: background-color 0.3s ease;
+    pointer-events: none;
 }
 
 .save-status.saving {
