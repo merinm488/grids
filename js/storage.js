@@ -140,7 +140,7 @@ class GridsStorage {
 
     /**
      * Delete spreadsheet from user data
-     * Also deletes the shared copy if one exists
+     * Server-side handles deleting the shared copy if one exists
      * @param {string} spreadsheetId - Spreadsheet ID to delete
      * @returns {Promise<boolean>} Success status
      */
@@ -152,9 +152,6 @@ class GridsStorage {
         }
 
         try {
-            // First, get the spreadsheet to check if it has a shared copy
-            const spreadsheet = await this.getSpreadsheet(spreadsheetId);
-
             const response = await fetch(this.apiEndpoint, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -168,12 +165,6 @@ class GridsStorage {
             });
 
             const result = await response.json();
-
-            // If deletion successful and spreadsheet had a shared copy, delete it too
-            if (result.success && spreadsheet?.sharedId) {
-                await this.deleteSharedSpreadsheet(spreadsheet.sharedId);
-            }
-
             return result.success;
         } catch (error) {
             console.error('[STORAGE] Delete error:', error);
@@ -235,7 +226,7 @@ class GridsStorage {
     // ================================================
 
     /**
-     * Share a spreadsheet
+     * Share a spreadsheet (server-side, no CORS issues)
      * @param {string} spreadsheetId - Spreadsheet ID to share
      * @returns {Promise<object|null>} Share result with shareUrl and alreadyShared flag
      */
@@ -247,87 +238,30 @@ class GridsStorage {
         }
 
         try {
-            // First, get the current spreadsheet data to check if already shared
-            const userData = await this.loadUserData();
-            if (!userData || !userData.spreadsheets) {
-                console.error('[STORAGE] No user data found');
-                return null;
-            }
-
-            const spreadsheet = userData.spreadsheets.find(s => s.id === spreadsheetId);
-            if (!spreadsheet) {
-                console.error('[STORAGE] Spreadsheet not found:', spreadsheetId);
-                return null;
-            }
-
-            // Check if already shared
-            if (spreadsheet.sharedId) {
-                const existingShareId = spreadsheet.sharedId;
-
-                // Get base URL
-                const baseUrl = this.getBaseUrl();
-                return {
-                    shareId: existingShareId,
-                    shareUrl: `${baseUrl}/shared.html?shared=${existingShareId}`,
-                    alreadyShared: true
-                };
-            }
-
-            // Generate new share ID
-            const newShareId = this.generateId();
-
-            // Prepare share data
-            const shareData = {
-                spreadsheet: spreadsheet,
-                sharedAt: new Date().toISOString()
-            };
-
-            // Store shared spreadsheet in textdb.dev
-            const textdbResponse = await fetch(`https://textdb.dev/api/data/shared_${newShareId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(shareData)
-            });
-
-            if (!textdbResponse.ok) {
-                console.error('[STORAGE] Failed to save shared spreadsheet to textdb.dev');
-                return null;
-            }
-
-            // Update spreadsheet with sharedId
-            spreadsheet.sharedId = newShareId;
-
-            // Save updated user data
-            const saveResponse = await fetch(this.apiEndpoint, {
+            // Call server-side API to handle sharing
+            const response = await fetch(this.apiEndpoint, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     hash: hash,
-                    action: 'updateSpreadsheet',
+                    action: 'shareSpreadsheet',
                     data: {
-                        spreadsheetId: spreadsheetId,
-                        spreadsheetData: spreadsheet
+                        spreadsheetId: spreadsheetId
                     }
                 })
             });
 
-            const saveResult = await saveResponse.json();
-            if (!saveResult.success) {
-                console.error('[STORAGE] Failed to update spreadsheet with sharedId');
+            const result = await response.json();
+
+            if (!result.success) {
+                console.error('[STORAGE] Failed to share spreadsheet:', result.error);
                 return null;
             }
 
-            // Get base URL and return share info
-            const baseUrl = this.getBaseUrl();
-            const shareUrl = `${baseUrl}/shared.html?shared=${newShareId}`;
-
             return {
-                shareId: newShareId,
-                shareUrl: shareUrl,
-                alreadyShared: false
+                shareId: result.shareId,
+                shareUrl: result.shareUrl,
+                alreadyShared: result.alreadyShared
             };
 
         } catch (error) {
@@ -382,30 +316,6 @@ class GridsStorage {
         } catch (error) {
             console.error('[STORAGE] Get shared spreadsheet error:', error);
             return null;
-        }
-    }
-
-    /**
-     * Delete shared spreadsheet from textdb.dev
-     * @param {string} shareId - Share ID to delete
-     * @returns {Promise<boolean>} Success status
-     */
-    async deleteSharedSpreadsheet(shareId) {
-        try {
-            // Send null to delete
-            const response = await fetch(`https://textdb.dev/api/data/shared_${shareId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(null)
-            });
-
-            return response.ok;
-        } catch (error) {
-            console.error('[STORAGE] Delete shared spreadsheet error:', error);
-            return false;
         }
     }
 

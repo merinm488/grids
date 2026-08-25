@@ -39,13 +39,14 @@ class SharedSpreadsheet {
     }
 
     /**
-     * Fetch shared spreadsheet from textdb.dev
+     * Fetch shared spreadsheet from server API (server-side handles textdb.dev)
      */
     async fetchSharedSpreadsheet() {
         try {
             this.showLoading();
 
-            const response = await fetch(`https://textdb.dev/api/data/shared_${this.shareId}`, {
+            // Use server API to avoid CORS issues (server fetches from textdb.dev)
+            const response = await fetch(`/api/users?shared=${encodeURIComponent(this.shareId)}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'
@@ -57,33 +58,14 @@ class SharedSpreadsheet {
                 return;
             }
 
-            const text = await response.text();
+            const result = await response.json();
 
-            // Check for empty or invalid content (including when original was deleted)
-            if (!text || text.trim() === '' || text.includes('hello world from textdb') || text.length < 10 || text === 'null' || text === 'undefined') {
-                this.showError('This shared spreadsheet has been deleted or the link is invalid');
-                return;
-            }
-
-            let parsed;
-            try {
-                parsed = JSON.parse(text);
-                if (typeof parsed === 'string') {
-                    parsed = JSON.parse(parsed);
-                }
-            } catch (parseError) {
-                console.error('[SHARED] JSON parse error:', parseError);
+            if (!result.success) {
                 this.showError('Shared spreadsheet not found');
                 return;
             }
 
-            // Validate structure
-            if (!parsed || typeof parsed !== 'object' || !parsed.spreadsheet) {
-                this.showError('Shared spreadsheet not found');
-                return;
-            }
-
-            this.spreadsheetData = parsed.spreadsheet;
+            this.spreadsheetData = result.spreadsheet;
 
             // Initialize Luckysheet in read-only mode
             await this.initializeSpreadsheet();

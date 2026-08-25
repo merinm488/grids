@@ -581,41 +581,6 @@ html, body {
     position: relative;
 }
 
-.save-status {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: transparent;
-    transition: background-color 0.3s ease;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.save-status.saving {
-    background-color: #f59e0b;
-    animation: pulse 1s infinite;
-}
-
-.save-status.saved {
-    background-color: var(--accent-color);
-}
-
-.save-status.error {
-    background-color: #dc2626;
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-}
-
 .spreadsheet-title {
     font-size: 16px;
     font-weight: 600;

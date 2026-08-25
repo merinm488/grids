@@ -1,29 +1,6 @@
-const CACHE_NAME = 'grids-spreadsheet-v3';
-const urlsToCache = [
-  '/',
-  '/home.html',
-  '/editor.html',
-  '/shared.html',
-  '/styles.css',
-  '/home.css',
-  '/auth.css',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
-  '/icons/apple-touch-icon.png',
-  '/icons/favicon-32x32.png',
-  'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css',
-  'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css',
-  'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css',
-  'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css',
-  'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js',
-  'https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-];
-
-const STATIC_CACHE = 'grids-static-v3';
-const DYNAMIC_CACHE = 'grids-dynamic-v3';
-const API_CACHE = 'grids-api-v3';
+const STATIC_CACHE = 'grids-static-v5';
+const DYNAMIC_CACHE = 'grids-dynamic-v5';
+const API_CACHE = 'grids-api-v5';
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -46,18 +23,18 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and force update
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE && cacheName !== API_CACHE) {
-            return caches.delete(cacheName);
-          }
+          // Delete ALL old caches to force fresh load
+          return caches.delete(cacheName);
         })
       );
     }).then(() => {
+      // Force all clients to adopt this new service worker immediately
       return self.clients.claim();
     })
   );
@@ -83,38 +60,50 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets - cache first, fall back to network
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version for static assets
-        return cachedResponse;
-      }
+  // Handle static assets - network first for critical files (JS/CSS/HTML)
+  const isCriticalFile = event.request.url.endsWith('.js') ||
+                        event.request.url.endsWith('.css') ||
+                        event.request.url.endsWith('.html');
 
-      // Otherwise fetch from network
-      return fetch(event.request).then((response) => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-
-        // Clone the response for caching
+  if (isCriticalFile) {
+    // Network first for critical files to ensure fresh code
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        // Cache the fresh response
         const responseToCache = response.clone();
-
-        // Cache dynamic resources
         caches.open(DYNAMIC_CACHE).then((cache) => {
           cache.put(event.request, responseToCache);
         });
-
         return response;
-      }).catch((error) => {
-        // Return a custom offline page for HTML requests
-        if (event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('/home.html');
+      }).catch(() => {
+        // If network fails, try cache as fallback
+        return caches.match(event.request);
+      })
+    );
+  } else {
+    // Cache first for images and other static assets
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-      });
-    })
-  );
+
+        return fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        }).catch((error) => {
+          if (event.request.headers.get('accept').includes('text/html')) {
+            return caches.match('/home.html');
+          }
+        });
+      })
+    );
+  }
 });
 
 // Handle background sync for offline actions

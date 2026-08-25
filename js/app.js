@@ -514,9 +514,6 @@ class GridsApp {
      */
     async save() {
         try {
-            // Show saving status
-            this.updateSaveStatus('saving');
-
             // Ensure IDs are consistent
             if (this.spreadsheetId && spreadsheetManager.currentSheetId !== this.spreadsheetId) {
                 console.warn('[APP] ID mismatch detected, correcting');
@@ -531,17 +528,14 @@ class GridsApp {
                 this.hasUnsavedChanges = false;
 
                 // Show save confirmation
-                this.updateSaveStatus('saved');
                 this.showNotification('Spreadsheet saved successfully', 'success');
                 return true;
             } else {
-                this.updateSaveStatus('error');
                 this.showError('Failed to save spreadsheet');
                 return false;
             }
         } catch (error) {
             console.error('[APP] Error saving spreadsheet:', error);
-            this.updateSaveStatus('error');
             this.showError('Error saving spreadsheet');
             return false;
         }
@@ -559,18 +553,10 @@ class GridsApp {
                 console.warn('[APP] Auto-save: Correcting ID mismatch');
                 spreadsheetManager.currentSheetId = this.spreadsheetId;
             }
-            // Show saving status for auto-save too
-            this.updateSaveStatus('saving');
             // Save if changed
-            const success = await spreadsheetManager.save();
+            await spreadsheetManager.save();
             // Reset unsaved flag
             this.hasUnsavedChanges = false;
-            // Update status
-            if (success) {
-                this.updateSaveStatus('saved');
-            } else {
-                this.updateSaveStatus('error');
-            }
         }
     }
 
@@ -659,35 +645,6 @@ class GridsApp {
                 window.gridsApp.markAsChanged();
             }
         };
-    }
-
-    /**
-     * Update save status indicator
-     * @param {string} status - Status ('saving', 'saved', 'error', or null to clear)
-     */
-    updateSaveStatus(status) {
-        const saveStatus = document.getElementById('saveStatus');
-        if (!saveStatus) return;
-
-        // Clear all classes
-        saveStatus.classList.remove('saving', 'saved', 'error');
-
-        // Add appropriate class
-        if (status === 'saving') {
-            saveStatus.classList.add('saving');
-        } else if (status === 'saved') {
-            saveStatus.classList.add('saved');
-            // Clear saved status after 2 seconds
-            setTimeout(() => {
-                saveStatus.classList.remove('saved');
-            }, 2000);
-        } else if (status === 'error') {
-            saveStatus.classList.add('error');
-            // Clear error status after 3 seconds
-            setTimeout(() => {
-                saveStatus.classList.remove('error');
-            }, 3000);
-        }
     }
 
     /**

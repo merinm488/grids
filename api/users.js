@@ -261,8 +261,107 @@ module.exports = async function handler(req, res) {
         // GET - Retrieve user data
         // ============================================================
         if (req.method === 'GET') {
-            const { hash } = req.query;
+            const { hash, shared } = req.query;
 
+            // Handle shared spreadsheet access
+            if (shared) {
+                console.log(`[API] GET fetching shared spreadsheet: ${shared}`);
+
+                // Try local development storage first
+                if (IS_DEVELOPMENT) {
+                    const sharedFilePath = path.join(__dirname, '..', 'db', `shared_${shared}.json`);
+
+                    if (!fs.existsSync(sharedFilePath)) {
+                        console.log(`[API] Shared spreadsheet not found (404)`);
+                        return res.status(404).json({
+                            success: false,
+                            error: 'Shared spreadsheet not found'
+                        });
+                    }
+
+                    try {
+                        const data = JSON.parse(fs.readFileSync(sharedFilePath, 'utf8'));
+                        console.log(`[API] Returning shared spreadsheet: ${data.spreadsheet?.name || 'Untitled'}`);
+                        return res.status(200).json({
+                            success: true,
+                            spreadsheet: data.spreadsheet,
+                            sharedAt: data.sharedAt
+                        });
+                    } catch (parseError) {
+                        console.error(`[API] Parse error:`, parseError);
+                        return res.status(404).json({
+                            success: false,
+                            error: 'Shared spreadsheet not found'
+                        });
+                    }
+                }
+
+                // Production: fetch from textdb.dev
+                try {
+                    const response = await fetch(`${TEXTDB_API_BASE}/shared_${shared}`, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        console.log(`[API] Shared spreadsheet not found (404)`);
+                        return res.status(404).json({
+                            success: false,
+                            error: 'Shared spreadsheet not found'
+                        });
+                    }
+
+                    const text = await response.text();
+                    console.log(`[API] Shared spreadsheet response length: ${text?.length}`);
+
+                    // Check for empty or invalid content
+                    if (!text || text.trim() === '' || text.includes('hello world from textdb') || text.length < 10) {
+                        console.log(`[API] Invalid shared spreadsheet content`);
+                        return res.status(404).json({
+                            success: false,
+                            error: 'Shared spreadsheet not found'
+                        });
+                    }
+
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(text);
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                    } catch (parseError) {
+                        console.error(`[API] JSON parse error: ${parseError.message}`);
+                        return res.status(404).json({
+                            success: false,
+                            error: 'Shared spreadsheet not found'
+                        });
+                    }
+
+                    // Validate structure
+                    if (!parsed || typeof parsed !== 'object' || !parsed.spreadsheet) {
+                        console.log(`[API] Invalid shared spreadsheet structure`);
+                        return res.status(404).json({
+                            success: false,
+                            error: 'Shared spreadsheet not found'
+                        });
+                    }
+
+                    console.log(`[API] Returning shared spreadsheet: ${parsed.spreadsheet.name || 'Untitled'}`);
+                    return res.status(200).json({
+                        success: true,
+                        spreadsheet: parsed.spreadsheet,
+                        sharedAt: parsed.sharedAt
+                    });
+                } catch (error) {
+                    console.error('[API] Error fetching shared spreadsheet:', error);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Server error'
+                    });
+                }
+            }
+
+            // Handle regular user data fetch
             if (!hash) {
                 return res.status(400).json({
                     success: false,
@@ -368,6 +467,7 @@ module.exports = async function handler(req, res) {
         // PUT - Update user data
         // ============================================================
         if (req.method === 'PUT') {
+            console.log('[API] PUT request body:', JSON.stringify(req.body));
             const { hash, action, data } = req.body;
 
             if (!hash) {
@@ -452,6 +552,41 @@ module.exports = async function handler(req, res) {
                     userData.spreadsheets = [];
                 }
 
+                // Find spreadsheet to check for shared copy
+                const spreadsheetToDelete = userData.spreadsheets.find(
+                    s => s.id === spreadsheetId
+                );
+
+                // Delete shared copy if exists
+                if (spreadsheetToDelete?.sharedId) {
+                    try {
+                        console.log(`[API] Deleting shared copy: shared_${spreadsheetToDelete.sharedId}`);
+
+                        if (IS_DEVELOPMENT) {
+                            // Development: delete local file
+                            const sharedFilePath = path.join(__dirname, '..', 'db', `shared_${spreadsheetToDelete.sharedId}.json`);
+                            if (fs.existsSync(sharedFilePath)) {
+                                fs.unlinkSync(sharedFilePath);
+                            }
+                            console.log(`[API] Shared copy deleted from local file`);
+                        } else {
+                            // Production: delete from textdb.dev
+                            await fetch(`${TEXTDB_API_BASE}/shared_${spreadsheetToDelete.sharedId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify(null)
+                            });
+                            console.log(`[API] Shared copy deleted from textdb.dev`);
+                        }
+                    } catch (e) {
+                        console.error('[API] Failed to delete shared copy:', e);
+                        // Continue anyway - the user's copy should still be deleted
+                    }
+                }
+
                 userData.spreadsheets = userData.spreadsheets.filter(
                     s => s.id !== spreadsheetId
                 );
@@ -496,6 +631,127 @@ module.exports = async function handler(req, res) {
                         error: 'Failed to update settings'
                     });
                 }
+            }
+
+            // SHARE SPREADSHEET
+            if (action === 'shareSpreadsheet') {
+                const { spreadsheetId } = data;
+
+                if (!userData.spreadsheets) {
+                    userData.spreadsheets = [];
+                }
+
+                const spreadsheetIndex = userData.spreadsheets.findIndex(
+                    s => s.id === spreadsheetId
+                );
+
+                if (spreadsheetIndex === -1) {
+                    return res.status(404).json({
+                        success: false,
+                        error: 'Spreadsheet not found'
+                    });
+                }
+
+                // Check if already shared
+                if (userData.spreadsheets[spreadsheetIndex].sharedId) {
+                    const existingShareId = userData.spreadsheets[spreadsheetIndex].sharedId;
+                    console.log(`[API] Spreadsheet already shared: ${existingShareId}`);
+
+                    // Generate share URL
+                    const protocol = req.headers['x-forwarded-proto'] || 'https';
+                    const host = req.headers['host'] || req.headers['x-vercel-forwarded-for'] || 'localhost';
+                    const baseUrl = `${protocol}://${host}`;
+                    const shareUrl = `${baseUrl}/shared.html?shared=${existingShareId}`;
+
+                    return res.status(200).json({
+                        success: true,
+                        shareId: existingShareId,
+                        shareUrl: shareUrl,
+                        alreadyShared: true
+                    });
+                }
+
+                // Generate new share ID
+                const newShareId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                console.log(`[API] Creating new share: ${newShareId}`);
+
+                // Prepare share data
+                const shareData = {
+                    spreadsheet: userData.spreadsheets[spreadsheetIndex],
+                    sharedAt: new Date().toISOString()
+                };
+
+                // Store shared spreadsheet - development uses local files, production uses textdb.dev
+                if (IS_DEVELOPMENT) {
+                    // Development: save to local file system
+                    try {
+                        const sharedFilePath = path.join(__dirname, '..', 'db', `shared_${newShareId}.json`);
+                        fs.writeFileSync(sharedFilePath, JSON.stringify(shareData, null, 2), 'utf8');
+                        console.log(`[API] Shared spreadsheet saved to local file`);
+                    } catch (e) {
+                        console.error('[API] Failed to save shared spreadsheet locally:', e);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to create share'
+                        });
+                    }
+                } else {
+                    // Production: save to textdb.dev (server-side, no CORS issues)
+                    try {
+                        const textdbResponse = await fetch(`${TEXTDB_API_BASE}/shared_${newShareId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(shareData)
+                        });
+
+                        if (!textdbResponse.ok) {
+                            console.error(`[API] Failed to save to textdb.dev: ${textdbResponse.status}`);
+                            return res.status(500).json({
+                                success: false,
+                                error: 'Failed to create share'
+                            });
+                        }
+
+                        console.log(`[API] Shared spreadsheet saved to textdb.dev`);
+                    } catch (e) {
+                        console.error('[API] Failed to save shared spreadsheet:', e);
+                        return res.status(500).json({
+                            success: false,
+                            error: 'Failed to create share'
+                        });
+                    }
+                }
+
+                // Update spreadsheet with sharedId
+                userData.spreadsheets[spreadsheetIndex].sharedId = newShareId;
+
+                // Save updated user data
+                const saved = await saveUserData(hash, userData);
+
+                if (!saved) {
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Failed to update spreadsheet'
+                    });
+                }
+
+                // Generate share URL
+                const protocol = req.headers['x-forwarded-proto'] || 'https';
+                const host = req.headers['host'] || req.headers['x-vercel-forwarded-for'] || 'localhost';
+                const baseUrl = `${protocol}://${host}`;
+                const shareUrl = `${baseUrl}/shared.html?shared=${newShareId}`;
+
+                console.log(`[API] Share created: ${shareUrl}`);
+
+                return res.status(200).json({
+                    success: true,
+                    shareId: newShareId,
+                    shareUrl: shareUrl,
+                    alreadyShared: false
+                });
             }
 
             return res.status(400).json({
