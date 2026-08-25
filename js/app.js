@@ -889,8 +889,6 @@ class GridsApp {
             const shareModal = document.getElementById('shareModal');
             const shareSpreadsheetName = document.getElementById('shareSpreadsheetName');
             const shareUrlInput = document.getElementById('shareUrlInput');
-            const copyButtonText = document.getElementById('copyButtonText');
-            const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
 
             // Get current spreadsheet name
             const metadata = spreadsheetManager.getMetadata();
@@ -938,8 +936,8 @@ class GridsApp {
         }
 
         // Reset copy button state
-        const copyButtonText = document.getElementById('copyButtonText');
         const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
+        const copyButtonText = document.getElementById('copyButtonText');
 
         if (copyButtonText) {
             copyButtonText.textContent = 'Copy';
@@ -955,7 +953,6 @@ class GridsApp {
      */
     async copyShareUrl() {
         const shareUrlInput = document.getElementById('shareUrlInput');
-        const copyButtonText = document.getElementById('copyButtonText');
         const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
 
         if (!shareUrlInput || !shareUrlInput.value) {
@@ -969,20 +966,22 @@ class GridsApp {
                 await navigator.clipboard.writeText(shareUrlInput.value);
 
                 // Update button state
-                if (copyButtonText) {
-                    copyButtonText.textContent = 'Copied!';
-                }
                 if (copyShareUrlBtn) {
                     copyShareUrlBtn.classList.add('copied');
+                    const copyText = copyShareUrlBtn.querySelector('.copy-text');
+                    if (copyText) {
+                        copyText.textContent = 'Copied!';
+                    }
                 }
 
                 // Reset after 2 seconds
                 setTimeout(() => {
-                    if (copyButtonText) {
-                        copyButtonText.textContent = 'Copy';
-                    }
                     if (copyShareUrlBtn) {
                         copyShareUrlBtn.classList.remove('copied');
+                        const copyText = copyShareUrlBtn.querySelector('.copy-text');
+                        if (copyText) {
+                            copyText.textContent = 'Copy';
+                        }
                     }
                 }, 2000);
 
@@ -996,19 +995,21 @@ class GridsApp {
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    if (copyButtonText) {
-                        copyButtonText.textContent = 'Copied!';
-                    }
                     if (copyShareUrlBtn) {
                         copyShareUrlBtn.classList.add('copied');
+                        const copyText = copyShareUrlBtn.querySelector('.copy-text');
+                        if (copyText) {
+                            copyText.textContent = 'Copied!';
+                        }
                     }
 
                     setTimeout(() => {
-                        if (copyButtonText) {
-                            copyButtonText.textContent = 'Copy';
-                        }
                         if (copyShareUrlBtn) {
                             copyShareUrlBtn.classList.remove('copied');
+                            const copyText = copyShareUrlBtn.querySelector('.copy-text');
+                            if (copyText) {
+                                copyText.textContent = 'Copy';
+                            }
                         }
                     }, 2000);
                 }

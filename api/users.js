@@ -658,8 +658,21 @@ module.exports = async function handler(req, res) {
                     console.log(`[API] Spreadsheet already shared: ${existingShareId}`);
 
                     // Generate share URL
-                    const protocol = req.headers['x-forwarded-proto'] || 'https';
-                    const host = req.headers['host'] || req.headers['x-vercel-forwarded-for'] || 'localhost';
+                    let protocol;
+                    let host;
+
+                    if (IS_DEVELOPMENT) {
+                        protocol = 'http';
+                        host = req.headers['host'] || 'localhost:3000';
+                        // Ensure we have the port
+                        if (host === 'localhost') {
+                            host = 'localhost:3000';
+                        }
+                    } else {
+                        protocol = req.headers['x-forwarded-proto'] || 'https';
+                        host = req.headers['host'] || req.headers['x-vercel-forwarded-for'] || 'localhost';
+                    }
+
                     const baseUrl = `${protocol}://${host}`;
                     const shareUrl = `${baseUrl}/shared.html?shared=${existingShareId}`;
 
@@ -739,8 +752,21 @@ module.exports = async function handler(req, res) {
                 }
 
                 // Generate share URL
-                const protocol = req.headers['x-forwarded-proto'] || 'https';
-                const host = req.headers['host'] || req.headers['x-vercel-forwarded-for'] || 'localhost';
+                let protocol;
+                let host;
+
+                if (IS_DEVELOPMENT) {
+                    protocol = 'http';
+                    host = req.headers['host'] || 'localhost:3000';
+                    // Ensure we have the port
+                    if (host === 'localhost') {
+                        host = 'localhost:3000';
+                    }
+                } else {
+                    protocol = req.headers['x-forwarded-proto'] || 'https';
+                    host = req.headers['host'] || req.headers['x-vercel-forwarded-for'] || 'localhost';
+                }
+
                 const baseUrl = `${protocol}://${host}`;
                 const shareUrl = `${baseUrl}/shared.html?shared=${newShareId}`;
 

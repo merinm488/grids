@@ -3,7 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-// Import the API handler
+// Set environment for development BEFORE importing API handler
+process.env.NODE_ENV = 'development';
+
+// Import the API handler AFTER setting environment
 const usersHandler = require('./api/users.js');
 
 const app = express();
@@ -13,19 +16,16 @@ const PORT = 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Set environment for development
-process.env.NODE_ENV = 'development';
-
 // Serve static files from the root directory
 app.use(express.static(__dirname));
 
 // Mock request/response for the API handler
-function createMockRequest(method, query, body) {
+function createMockRequest(method, query, body, headers = {}) {
   const req = {
     method,
     query: query || {},
     body: body || {},
-    headers: {}
+    headers: headers || {}
   };
   return req;
 }
@@ -72,7 +72,7 @@ app.all('/api/users', async (req, res) => {
     }
 
     // Create mock request/response for the API handler
-    const mockReq = createMockRequest(req.method, req.query, req.body);
+    const mockReq = createMockRequest(req.method, req.query, req.body, req.headers);
     const mockRes = createMockResponse();
 
     // Call the API handler
@@ -106,7 +106,7 @@ app.get('/api/users', async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     // Create mock request/response for the API handler
-    const mockReq = createMockRequest('GET', req.query, {});
+    const mockReq = createMockRequest('GET', req.query, {}, req.headers);
     const mockRes = createMockResponse();
 
     // Call the API handler

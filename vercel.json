@@ -4,5 +4,16 @@
       "source": "/api/:path*",
       "destination": "/api/:path*"
     }
+  ],
+  "headers": [
+    {
+      "source": "/shared.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
   ]
 }

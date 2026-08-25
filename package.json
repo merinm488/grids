@@ -4,9 +4,9 @@
   "description": "Modern spreadsheet application with Excel-like features",
   "main": "index.html",
   "scripts": {
-    "start": "npx http-server -p 8000 -c-1 --cors",
-    "dev": "npx http-server -p 8000 -c-1 --cors",
-    "serve": "python -m http.server 8000"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "serve": "npx http-server -p 8000 -c-1 --cors"
   },
   "keywords": [
     "spreadsheet",
