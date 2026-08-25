@@ -583,14 +583,15 @@ html, body {
 
 .save-status {
     position: absolute;
-    bottom: -2px;
-    right: -2px;
+    bottom: 2px;
+    right: 2px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background-color: transparent;
     transition: background-color 0.3s ease;
     pointer-events: none;
+    z-index: 1;
 }
 
 .save-status.saving {
