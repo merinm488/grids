@@ -67,6 +67,9 @@ class SharedSpreadsheet {
 
             this.spreadsheetData = result.spreadsheet;
 
+            // Update the page title with the actual spreadsheet name
+            this.updatePageTitle();
+
             // Initialize Luckysheet in read-only mode
             await this.initializeSpreadsheet();
 
@@ -180,6 +183,21 @@ class SharedSpreadsheet {
             if (errorText && message) {
                 errorText.textContent = message;
             }
+        }
+    }
+
+    /**
+     * Update page title with spreadsheet name
+     */
+    updatePageTitle() {
+        const titleElement = document.getElementById('sharedSpreadsheetTitle');
+        if (titleElement && this.spreadsheetData.name) {
+            titleElement.textContent = this.spreadsheetData.name;
+        }
+
+        // Update document title as well
+        if (this.spreadsheetData.name) {
+            document.title = `${this.spreadsheetData.name} - Shared Spreadsheet`;
         }
     }
 
