@@ -21,9 +21,9 @@ const urlsToCache = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
-const STATIC_CACHE = 'grids-static-v2';
-const DYNAMIC_CACHE = 'grids-dynamic-v2';
-const API_CACHE = 'grids-api-v2';
+const STATIC_CACHE = 'grids-static-v3';
+const DYNAMIC_CACHE = 'grids-dynamic-v3';
+const API_CACHE = 'grids-api-v3';
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
