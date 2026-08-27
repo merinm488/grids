@@ -45,8 +45,7 @@ const APP_CONFIG = {
 
     // Spreadsheet configuration
     spreadsheet: {
-        // TODO: Customize Luckysheet options
-        container: 'luckysheet',
+        container: 'univer',
         lang: 'en', // Language
         showinfobar: false, // Show infobar
         showsheetbar: true, // Show sheet bar
@@ -128,14 +127,11 @@ function getStorageConfig() {
 
 /**
  * Get spreadsheet initialization options
- * TODO: Build Luckysheet options object
+ * TODO: Build Univer options object
  */
 function getSpreadsheetOptions(data = null) {
-    // TODO: Construct and return Luckysheet options
-    return {
-        container: APP_CONFIG.spreadsheet.container,
-        // TODO: Add other Luckysheet options here
-    };
+    // Options are built in js/spreadsheet.js (createUniverInstance)
+    return { container: APP_CONFIG.spreadsheet.container };
 }
 
 /**

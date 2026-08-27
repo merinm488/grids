@@ -1,6 +1,6 @@
-const STATIC_CACHE = 'grids-static-v5';
-const DYNAMIC_CACHE = 'grids-dynamic-v5';
-const API_CACHE = 'grids-api-v5';
+const STATIC_CACHE = 'grids-static-v6-univer';
+const DYNAMIC_CACHE = 'grids-dynamic-v6-univer';
+const API_CACHE = 'grids-api-v6-univer';
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {

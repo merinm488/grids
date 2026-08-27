@@ -70,7 +70,7 @@ class SharedSpreadsheet {
             // Update the page title with the actual spreadsheet name
             this.updatePageTitle();
 
-            // Initialize Luckysheet in read-only mode
+            // Initialize Univer in read-only mode
             await this.initializeSpreadsheet();
 
         } catch (error) {
@@ -80,54 +80,41 @@ class SharedSpreadsheet {
     }
 
     /**
-     * Initialize Luckysheet in read-only mode
+     * Initialize Univer in read-only mode
      */
     async initializeSpreadsheet() {
         try {
-            // Check if Luckysheet is available
-            if (typeof luckysheet === 'undefined') {
-                throw new Error('Luckysheet not loaded');
+            const body = this.spreadsheetData.data || this.spreadsheetData;
+
+            // Legacy Luckysheet payload - cannot be rendered by the new engine
+            if (Array.isArray(body)) {
+                this.showLegacyNotice();
+                this.hideLoading();
+                return;
             }
 
-            // Prepare data for Luckysheet
-            const options = {
-                container: 'luckysheet',
-                data: this.spreadsheetData.data || [],
-                title: this.spreadsheetData.name || 'Untitled Spreadsheet',
-                lang: 'en',
-                showinfobar: false,
-                showsheetbar: true,
-                showstatisticBar: false,
-                showConfigWindowResize: true,
+            if (typeof UniverPresets === 'undefined') {
+                throw new Error('Univer not loaded');
+            }
 
-                // Read-only mode settings
-                allowEdit: false,
-                enableAddRow: false,
-                enableAddCol: false,
-                enableAddBackTop: false,
-                userInfo: false,
+            const { createUniver } = UniverPresets;
+            const { LocaleType, mergeLocales } = UniverCore;
+            const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
 
-                // Disable features for read-only
-                showSheet: false,
-                enableCellEdit: false,
-                enableRangeEdit: false,
+            const { univerAPI } = createUniver({
+                locale: LocaleType.EN_US,
+                locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
+                presets: [UniverSheetsCorePreset({ container: 'univer' })],
+            });
 
-                // Custom toolbar for read-only
-                customButtons: [],
+            const fWorkbook = univerAPI.createWorkbook({
+                ...body,
+                name: this.spreadsheetData.name || body.name || 'Untitled Spreadsheet',
+            });
 
-                // Callbacks
-                hook: {
-                    cellEditBefore: function (range) {
-                        return false; // Prevent editing
-                    },
-                    rangeEditBefore: function (range) {
-                        return false; // Prevent editing
-                    }
-                }
-            };
+            // View-only mode: block all editing commands
+            fWorkbook.setEditable(false);
 
-            // Initialize Luckysheet
-            luckysheet.create(options);
             this.isLoaded = true;
             this.hideLoading();
 
@@ -135,6 +122,26 @@ class SharedSpreadsheet {
             console.error('[SHARED] Spreadsheet initialization error:', error);
             this.showError('Failed to display spreadsheet');
         }
+    }
+
+    /**
+     * Friendly notice for spreadsheets created with the older
+     * Luckysheet-based version of Grids. Data stays untouched.
+     */
+    showLegacyNotice() {
+        const container = document.getElementById('univer');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="legacy-notice">
+                <div class="legacy-notice-card">
+                    <div class="legacy-notice-icon">📊</div>
+                    <h2>Created with an older version of Grids</h2>
+                    <p>This shared spreadsheet was made with the previous Grids engine and can no longer be displayed here.</p>
+                    <p class="legacy-note">The owner's data is safe and untouched.</p>
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -221,16 +228,16 @@ class SharedSpreadsheet {
 let sharedSpreadsheet;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Wait for Luckysheet to be available
+    // Wait for Univer to be available
     let attempts = 0;
     const maxAttempts = 100;
-    while (typeof luckysheet === 'undefined' && attempts < maxAttempts) {
+    while (typeof UniverPresets === 'undefined' && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
 
-    if (typeof luckysheet === 'undefined') {
-        console.error('[SHARED] Luckysheet failed to load');
+    if (typeof UniverPresets === 'undefined') {
+        console.error('[SHARED] Univer failed to load');
         document.body.innerHTML = `
             <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
                 <h2>Failed to load spreadsheet library</h2>

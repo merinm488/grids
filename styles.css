@@ -1,13 +1,3 @@
-/* ================================================
-   GRIDS - Modern Spreadsheet Application
-   Global Styles & Theme Variables
-   ================================================ */
-
-/* ================================================
-   PWA Styles
-   ================================================ */
-
-/* PWA Update Notification */
 .pwa-update-notification,
 .pwa-success-notification {
     position: fixed;
@@ -76,7 +66,6 @@
     color: var(--text-primary);
 }
 
-/* PWA Success Notification */
 .pwa-success-notification {
     background: var(--accent-color);
     color: white;
@@ -90,7 +79,6 @@
     font-weight: 500;
 }
 
-/* Connection Status */
 .connection-status {
     position: fixed;
     top: 1rem;
@@ -114,23 +102,16 @@
     color: white;
 }
 
-/* PWA-specific responsive adjustments */
-@media (display-mode: standalone) {
-    /* Adjust spacing when running as standalone PWA */
-    .top-nav,
+@media (display-mode: standalone){.top-nav,
     .home-header {
         padding-top: env(safe-area-inset-top);
     }
 
-    /* Add safe area support for notched devices */
-    body {
+body {
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
         padding-bottom: env(safe-area-inset-bottom);
-    }
-}
-
-:root {
+    }}:root {
     /* Light Theme (Default) - Professional Palette */
     --bg-primary: #fafafa;
     --bg-secondary: #ffffff;
@@ -178,13 +159,7 @@
     --tab-active: #0a0a0a;
     --scrollbar-bg: #1a1a1a;
     --scrollbar-thumb: #404040;
-}
-
-/* ================================================
-   Base Styles
-   ================================================ */
-
-* {
+}* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -200,41 +175,23 @@ html, body {
     transition: background-color 0.2s ease, color 0.2s ease;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-}
-
-/* Professional Scrollbar Styling */
-::-webkit-scrollbar {
+}::-webkit-scrollbar {
     width: 8px;
     height: 8px;
-}
-
-::-webkit-scrollbar-track {
+}::-webkit-scrollbar-track {
     background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
+}::-webkit-scrollbar-thumb {
     background-color: var(--scrollbar-thumb);
     border-radius: 4px;
     transition: background-color 0.3s;
-}
-
-::-webkit-scrollbar-thumb:hover {
+}::-webkit-scrollbar-thumb:hover {
     background-color: var(--accent-color);
-}
-
-/* Hide scrollbar by default, show on hover/scroll */
-* {
+}* {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
-}
-
-*:hover {
+}*:hover {
     scrollbar-color: var(--scrollbar-thumb) transparent;
 }
-
-/* ================================================
-   Settings Dropdown Menu
-   ================================================ */
 
 .settings-dropdown {
     position: absolute;
@@ -343,21 +300,15 @@ html, body {
     background: linear-gradient(135deg, #0a0a0a 50%, #22c55e 50%);
 }
 
-/* Divider in dropdown */
 .settings-dropdown-divider {
     height: 1px;
     background-color: var(--border-color);
     margin: 4px 0;
 }
 
-/* Remove old logout buttons */
 .logout-btn {
     display: none !important;
 }
-
-/* ================================================
-   Theme Submenu
-   ================================================ */
 
 .theme-dropdown-container {
     position: relative;
@@ -484,10 +435,6 @@ html, body {
     color: var(--accent-color);
 }
 
-/* ================================================
-   Loading Overlay
-   ================================================ */
-
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -537,10 +484,6 @@ html, body {
     font-weight: 500;
 }
 
-/* ================================================
-   Top Navigation Bar
-   ================================================ */
-
 .top-nav {
     position: fixed;
     top: 0;
@@ -576,7 +519,6 @@ html, body {
     align-items: center;
 }
 
-/* Save button styling */
 #saveBtn {
     position: relative;
 }
@@ -658,561 +600,27 @@ html, body {
     position: relative;
 }
 
-/* ================================================
-   Spreadsheet Container
-   ================================================ */
-
-.luckysheet-container {
-    width: 100%;
-    height: calc(100vh - 44px);
-    position: relative;
-    margin-top: 44px;
-}
-
-/* ================================================
-   Luckysheet Theme Overrides
-   ================================================ */
-
-/* Toolbar styling */
-.luckysheet-wa-editor,
-.luckysheet-toolbar-container {
-    background-color: var(--toolbar-bg) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-}
-
-/* Toolbar buttons and icons */
-.luckysheet-toolbar-button,
-.luckysheet-toolbar-menu-button,
-.luckysheet-toolbar-select {
-    color: var(--text-primary) !important;
-    background-color: transparent !important;
-}
-
-/* Font size input and number displays */
-.luckysheet-toolbar-select-input,
-.luckysheet-toolbar-select-fontsize,
-.luckysheet-toolbar-select-val,
-input.luckysheet-toolbar-select-input {
-    color: var(--text-primary) !important;
-    background-color: var(--bg-secondary) !important;
-}
-
-/* Number inputs in toolbar */
 input[type="number"],
 input[type="text"] {
     color: var(--text-primary) !important;
     background-color: var(--bg-secondary) !important;
 }
 
-.luckysheet-toolbar-button:hover,
-.luckysheet-toolbar-menu-button:hover,
-.luckysheet-toolbar-select:hover {
-    color: var(--accent-color) !important;
-    background-color: var(--accent-light) !important;
-}
-
-/* Toolbar dropdown menus */
-.luckysheet-toolbar-menu-button-select {
-    background-color: var(--bg-secondary) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
-}
-
-/* Font dropdown and other selects */
-.luckysheet-toolbar-select-transform,
-.luckysheet-toolbar-select-wrap {
-    background-color: var(--bg-secondary) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
-}
-
-/* Dropdown arrow icons */
-.luckysheet-toolbar-menu-button .fa-caret-down,
-.luckysheet-toolbar-select .fa-caret-down {
-    color: var(--text-primary) !important;
-}
-
-/* Dropdown menu items */
-.luckysheet-toolbar-menu-btn-set,
-.luckysheet-toolbar-menu-btn-item {
-    color: var(--text-primary) !important;
-    background-color: var(--bg-secondary) !important;
-}
-
-.luckysheet-toolbar-menu-btn-set:hover,
-.luckysheet-toolbar-menu-btn-item:hover {
-    background-color: var(--accent-light) !important;
-    color: var(--accent-color) !important;
-}
-
-/* Icon containers in toolbar */
-.luckysheet-toolbar-paint,
-.luckysheet-toolbar-menu-button-paint {
-    background-color: transparent !important;
-}
-
-/* Toolbar separators */
-.luckysheet-toolbar-line {
-    background-color: var(--border-color) !important;
-}
-
-/* Formula bar */
-.luckysheet-wa-editor .formula-bar {
-    background-color: var(--formula-bar-bg) !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-primary) !important;
-}
-
-/* Sheet tabs */
-.luckysheet-sheets-item {
-    background-color: var(--tab-bg) !important;
-    color: var(--text-secondary) !important;
-    border: 1px solid var(--border-color) !important;
-}
-
-.luckysheet-sheets-item-active {
-    background-color: var(--tab-active) !important;
-    color: var(--accent-color) !important;
-    border-bottom-color: var(--accent-color) !important;
-}
-
-/* Cell selection - green border only, no background */
-.luckysheet-cell-selected,
-.luckysheet-cell-selected:focus,
-.luckysheet-selection-highlight,
-.luckysheet-selection-copy {
-    border: 2px solid var(--accent-color) !important;
-    background-color: transparent !important;
-    background: none !important;
-}
-
-/* Remove blue background from cell selection area - comprehensive */
-.luckysheet-selection-range,
-.luckysheet-select-range,
-.luckysheet-cell-range,
-.luckysheet-selection-range-hc,
-.luckysheet-selection-range-bg {
-    background-color: transparent !important;
-    background: none !important;
-}
-
-/* Active cell highlight - remove all backgrounds */
-.luckysheet-active-cell,
-.luckysheet-cell-focus,
-.luckysheet-cell-selected-current {
-    border: 2px solid var(--accent-color) !important;
-    background-color: transparent !important;
-    background: none !important;
-}
-
-/* Target the specific overlay elements Luckysheet uses */
-.luckysheet-selection-highlight-none,
-.luckysheet-selection-highlight-top,
-.luckysheet-selection-highlight-bottom,
-.luckysheet-selection-highlight-left,
-.luckysheet-selection-highlight-right {
-    background-color: transparent !important;
-}
-
-/* Remove fill/hatch patterns from selection */
-.luckysheet-selection-copy-hc,
-.luckysheet-selection-copy-bg {
-    background: none !important;
-    background-color: transparent !important;
-}
-
-/* Main spreadsheet area */
-.luckysheet-grid-area,
-.luckysheet-grid-container,
-.luckysheet-cells-area {
-    background-color: var(--cell-bg) !important;
-}
-
-/* Individual cells */
-.luckysheet-cell {
-    background-color: var(--cell-bg) !important;
-    color: var(--text-primary) !important;
-    font-family: Calibri, 'Segoe UI', Arial, sans-serif !important;
-    font-size: 11px !important;
-}
-
-/* Cell content */
-.luckysheet-cell span,
-.luckysheet-cell div {
-    color: var(--text-primary) !important;
-    font-family: Calibri, 'Segoe UI', Arial, sans-serif !important;
-    font-size: 11px !important;
-}
-
-.luckysheet-selection-copy {
-    border: 2px dashed var(--accent-color) !important;
-}
-
-/* Headers */
-.luckysheet-headers hints-cell {
-    background-color: var(--header-bg) !important;
-    color: var(--header-text) !important;
-    border: 1px solid var(--cell-border) !important;
-}
-
-/* Scrollbar */
-.luckysheet-scrollbar-element::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-.luckysheet-scrollbar-element::-webkit-scrollbar-track {
-    background: var(--scrollbar-bg);
-}
-
-.luckysheet-scrollbar-element::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 5px;
-}
-
-.luckysheet-scrollbar-element::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-color);
-}
-
-/* Context menu */
-.luckysheet-context-menu {
-    background-color: var(--bg-secondary) !important;
-    border: 1px solid var(--border-color) !important;
-    box-shadow: 0 4px 12px var(--shadow-color) !important;
-}
-
-.luckysheet-context-menu-item {
-    color: var(--text-primary) !important;
-}
-
-.luckysheet-context-menu-item:hover {
-    background-color: var(--accent-light) !important;
-    color: var(--accent-color) !important;
-}
-
-/* Modal dialogs */
-.luckysheet-modal-dialog {
-    background-color: var(--bg-secondary) !important;
-    border: 1px solid var(--border-color) !important;
-}
-
-.luckysheet-modal-title,
-.luckysheet-modal-content {
-    color: var(--text-primary) !important;
-}
-
-/* Fix Insert Link modal spacing issues */
-.luckysheet-modal-dialog .luckysheet-modal-content input,
-.luckysheet-modal-dialog .luckysheet-modal-content select {
-    margin-bottom: 16px !important;
-    min-height: 36px !important;
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-}
-
-.luckysheet-modal-dialog .luckysheet-modal-content label {
-    display: block !important;
-    margin-bottom: 8px !important;
-    margin-top: 12px !important;
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-}
-
-.luckysheet-modal-dialog .luckysheet-modal-content input:first-of-type + label,
-.luckysheet-modal-dialog .luckysheet-modal-content select:first-of-type + label {
-    margin-top: 0 !important;
-}
-
-/* Ensure modal content uses block layout */
-.luckysheet-modal-dialog .luckysheet-modal-content {
-    position: relative !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
-
-/* Fix any absolutely positioned children in modal */
-.luckysheet-modal-dialog .luckysheet-modal-content > * {
-    position: static !important;
-}
-
-/* Additional fixes for Insert Link modal specifically */
-.luckysheet-modal-dialog {
-    max-width: 500px !important;
-    width: 90% !important;
-}
-
-/* Fix placeholder text truncation */
-.luckysheet-modal-dialog input::placeholder,
-.luckysheet-modal-dialog input::-webkit-input-placeholder,
-.luckysheet-modal-dialog input::-moz-placeholder {
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-}
-
-/* Fix label alignment for Link section */
-.luckysheet-modal-dialog .luckysheet-modal-content label[style*="bold"],
-.luckysheet-modal-dialog .luckysheet-modal-content > div > label:first-child {
-    display: block !important;
-    width: 100% !important;
-    margin-bottom: 4px !important;
-}
-
-/* Ensure consistent spacing for all form groups */
-.luckysheet-modal-dialog .luckysheet-modal-content > div {
-    margin-bottom: 12px !important;
-    width: 100% !important;
-}
-
-/* Fix the address label alignment */
-.luckysheet-modal-dialog .luckysheet-modal-content label:nth-of-type(2),
-.luckysheet-modal-dialog .luckysheet-modal-content label:contains("address") {
-    margin-left: 0 !important;
-    margin-top: 8px !important;
-    display: block !important;
-}
-
-/* Buttons */
-.luckysheet-toolbar-button,
-.luckysheet-toolbar-button-hover {
-    color: var(--text-primary) !important;
-}
-
-.luckysheet-toolbar-button:hover,
-.luckysheet-toolbar-button-hover:hover {
-    background-color: var(--accent-light) !important;
-    color: var(--accent-color) !important;
-}
-
-/* ================================================
-   Luckysheet Dark Mode Fixes
-   ================================================ */
-
-/* Cell editor input - ensure proper contrast in all themes */
-.luckysheet-cell-input,
-.luckysheet-input-box,
-.luckysheet-cell-input textarea,
-.luckysheet-rich-text-editor,
-.luckysheet-selection-format {
-    color: var(--text-primary) !important;
-    font-family: Calibri, 'Segoe UI', Arial, sans-serif !important;
-    font-size: 11px !important;
-}
-
-/* Ensure textarea and input elements inside cells inherit proper color */
-.luckysheet-cell-input textarea,
-.luckysheet-cell-input input,
-.luckysheet-input-box textarea,
-.luckysheet-input-box input {
-    color: var(--text-primary) !important;
-}
-
-/* Force dark mode cell input styling with white background and black text for visibility */
-[data-theme="dark"] .luckysheet-cell-input,
-[data-theme="dark"] .luckysheet-input-box,
-[data-theme="dark"] .luckysheet-rich-text-editor {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-}
-
-[data-theme="dark"] .luckysheet-cell-input textarea,
-[data-theme="dark"] .luckysheet-cell-input input,
-[data-theme="dark"] .luckysheet-input-box textarea,
-[data-theme="dark"] .luckysheet-input-box input,
-[data-theme="dark"] .luckysheet-rich-text-editor textarea,
-[data-theme="dark"] .luckysheet-rich-text-editor input {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-}
-
-/* Ensure formula bar inputs and text have white background with black text in dark mode for visibility */
-[data-theme="dark"] .luckysheet-formula-input,
-[data-theme="dark"] .luckysheet-wa-editor input,
-[data-theme="dark"] .luckysheet-formula-bar-text,
-[data-theme="dark"] #luckysheet-formula-input-range,
-[data-theme="dark"] .luckysheet-info-detail-input,
-[data-theme="dark"] .luckysheet-cell-info,
-[data-theme="dark"] .luckysheet-cell-reference,
-[data-theme="dark"] .formula-bar input,
-[data-theme="dark"] .formula-bar span,
-[data-theme="dark"] .luckysheet-wa-editor .formula-bar {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-}
-
-/* Additional formula bar text elements */
-[data-theme="dark"] .luckysheet-wa-editor .formula-bar span,
-[data-theme="dark"] .luckysheet-wa-editor .formula-bar div,
-[data-theme="dark"] .luckysheet-wa-editor .formula-bar p {
-    background-color: transparent !important;
-    color: #000000 !important;
-}
-
-/* Statistic bar - make text visible in dark mode */
-.luckysheet-statistic-bar,
-.luckysheet-wa-editor .luckysheet-statistic-bar,
-.luckysheet-info-bar,
-.luckysheet-wa-calculate-bar {
-    background-color: var(--bg-secondary) !important;
-    color: var(--text-primary) !important;
-    border-top: 1px solid var(--border-color) !important;
-}
-
-/* Statistic bar text elements */
-.luckysheet-statistic-bar span,
-.luckysheet-statistic-bar div,
-.luckysheet-wa-calculate-bar span,
-.luckysheet-wa-calculate-bar div,
-.luckysheet-info-bar span,
-.luckysheet-info-bar div {
-    color: var(--text-primary) !important;
-}
-
-/* Formula bar / cell reference input (top-left) - always visible */
-.luckysheet-wa-editor input,
-.luckysheet-formula-input,
-.luckysheet-formula-bar-text,
-.luckysheet-wa-editor .luckysheet-formula-input,
-#luckysheet-formula-input-range,
-.luckysheet-info-detail,
-.luckysheet-info-detail-input,
-.luckysheet-cell-info,
-.luckysheet-cell-reference,
-.luckysheet-wa-editor .luckysheet-wa-editor {
-    background-color: var(--bg-secondary) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
-}
-
-/* Formula bar container - dark mode override */
-[data-theme="dark"] .luckysheet-wa-editor,
-[data-theme="dark"] .luckysheet-wa-calculate-bottom,
-[data-theme="dark"] .luckysheet-wa-calculate-top,
-[data-theme="dark"] .luckysheet-formula-bar {
-    background-color: var(--bg-secondary) !important;
-}
-
-/* Status bar icons and buttons - ensure proper contrast in all themes */
-.luckysheet-wa-calculate-bottom a,
-.luckysheet-wa-calculate-bottom button,
-.luckysheet-wa-calculate-top a,
-.luckysheet-wa-calculate-top button,
-.luckysheet-statistic-bar a,
-.luckysheet-statistic-bar button,
-.luckysheet-info-bar a,
-.luckysheet-info-bar button {
-    color: var(--text-primary) !important;
-    background-color: transparent !important;
-}
-
-.luckysheet-wa-calculate-bottom a:hover,
-.luckysheet-wa-calculate-bottom button:hover,
-.luckysheet-wa-calculate-top a:hover,
-.luckysheet-wa-calculate-top button:hover,
-.luckysheet-statistic-bar a:hover,
-.luckysheet-statistic-bar button:hover,
-.luckysheet-info-bar a:hover,
-.luckysheet-info-bar button:hover {
-    color: var(--accent-color) !important;
-    background-color: transparent !important;
-}
-
-/* Status bar icons (FontAwesome/i elements) */
-.luckysheet-wa-calculate-bottom i,
-.luckysheet-wa-calculate-top i,
-.luckysheet-statistic-bar i,
-.luckysheet-info-bar i,
-.luckysheet-wa-calculate-bottom .fa,
-.luckysheet-wa-calculate-top .fa,
-.luckysheet-statistic-bar .fa,
-.luckysheet-info-bar .fa {
-    color: var(--text-primary) !important;
-}
-
-/* Status bar icon containers */
-.luckysheet-wa-calculate-bottom div[class*="icon"],
-.luckysheet-wa-calculate-top div[class*="icon"],
-.luckysheet-statistic-bar div[class*="icon"],
-.luckysheet-info-bar div[class*="icon"] {
-    color: var(--text-primary) !important;
-}
-
-/* Dark mode status bar specific fixes */
-[data-theme="dark"] .luckysheet-wa-calculate-bottom a,
-[data-theme="dark"] .luckysheet-wa-calculate-bottom button,
-[data-theme="dark"] .luckysheet-wa-calculate-top a,
-[data-theme="dark"] .luckysheet-wa-calculate-top button,
-[data-theme="dark"] .luckysheet-statistic-bar a,
-[data-theme="dark"] .luckysheet-statistic-bar button,
-[data-theme="dark"] .luckysheet-info-bar a,
-[data-theme="dark"] .luckysheet-info-bar button {
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] .luckysheet-wa-calculate-bottom a:hover,
-[data-theme="dark"] .luckysheet-wa-calculate-bottom button:hover,
-[data-theme="dark"] .luckysheet-wa-calculate-top a:hover,
-[data-theme="dark"] .luckysheet-wa-calculate-top button:hover,
-[data-theme="dark"] .luckysheet-statistic-bar a:hover,
-[data-theme="dark"] .luckysheet-statistic-bar button:hover,
-[data-theme="dark"] .luckysheet-info-bar a:hover,
-[data-theme="dark"] .luckysheet-info-bar button:hover {
-    color: var(--accent-color) !important;
-}
-
-/* Row/column headers (A1, B22 etc.) - make visible in dark mode */
-.luckysheet-headers,
-.luckysheet-thead-cell,
-.luckysheet-thead-cell-th,
-.luckysheet-thead-cell-wa,
-.luckysheet-row-header,
-.luckysheet-column-header,
-.luckysheet-rows-h,
-.luckysheet-cols-h,
-.luckysheet-cell-header.row-h,
-.luckysheet-cell-header.col-h,
-.luckysheet-rows-h span,
-.luckysheet-cols-h span,
-.luckysheet-thead-cell span,
-.luckysheet-thead-cell-th span {
-    background-color: var(--header-bg) !important;
-    color: var(--header-text) !important;
-    border-color: var(--border-color) !important;
-}
-
-/* Cell hover - not black, use accent highlight */
-.luckysheet-cell-hover {
-    background-color: rgba(34, 197, 94, 0.08) !important;
-}
-
-[data-theme="dark"] .luckysheet-cell-hover {
-    background-color: rgba(34, 197, 94, 0.12) !important;
-}
-
-/* ================================================
-   Responsive Design
-   ================================================ */
-
-@media (max-width: 768px) {
-    .settings-menu-container {
+@media (max-width: 768px){.settings-menu-container {
         bottom: 15px;
         left: 15px;
     }
 
-    .settings-btn {
+.settings-btn {
         width: 45px;
         height: 45px;
     }
 
-    .settings-icon {
+.settings-icon {
         font-size: 20px;
     }
 
-    .settings-dropdown {
+.settings-dropdown {
         min-width: 180px;
         bottom: 55px;
         background-color: #ffffff !important;
@@ -1225,12 +633,12 @@ input[type="text"] {
         z-index: 99999 !important;
     }
 
-    .settings-dropdown.active {
+.settings-dropdown.active {
         opacity: 1 !important;
         visibility: visible !important;
     }
 
-    .theme-submenu {
+.theme-submenu {
         background-color: #ffffff !important;
         background: #ffffff !important;
         border: 1px solid #e5e5e5 !important;
@@ -1241,61 +649,53 @@ input[type="text"] {
         z-index: 100000 !important;
     }
 
-    .theme-submenu.active {
+.theme-submenu.active {
         opacity: 1 !important;
         visibility: visible !important;
     }
 
-    /* Dark theme overrides for mobile */
-    [data-theme="dark"] .settings-dropdown {
+[data-theme="dark"] .settings-dropdown {
         background-color: #1a1a1a !important;
         background: #1a1a1a !important;
         border-color: #2a2a2a !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
     }
 
-    [data-theme="dark"] .theme-submenu {
+[data-theme="dark"] .theme-submenu {
         background-color: #1a1a1a !important;
         background: #1a1a1a !important;
         border-color: #2a2a2a !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* Ensure dropdown items have solid backgrounds on mobile */
-    .settings-dropdown-item {
+.settings-dropdown-item {
         background-color: #ffffff !important;
         color: #1a1a1a !important;
     }
 
-    [data-theme="dark"] .settings-dropdown-item {
+[data-theme="dark"] .settings-dropdown-item {
         background-color: #1a1a1a !important;
         color: #e5e5e5 !important;
     }
 
-    /* Ensure dropdown items have proper hover states on mobile */
-    [data-theme="dark"] .settings-dropdown-item:hover {
+[data-theme="dark"] .settings-dropdown-item:hover {
         background-color: #14532d !important;
         color: #22c55e !important;
     }
 
-    [data-theme="light"] .settings-dropdown-item:hover {
+[data-theme="light"] .settings-dropdown-item:hover {
         background-color: #dcfce7 !important;
         color: #22c55e !important;
     }
 
-    /* Make spreadsheet more mobile-friendly */
-    .luckysheet-container {
-        font-size: 14px;
-    }
-        color: #e5e5e5 !important;
+color: #e5e5e5 !important;
     }
 
-    [data-theme="light"] .theme-option {
+[data-theme="light"] .theme-option {
         color: #1a1a1a !important;
     }
 
-    /* Mobile: position theme submenu below parent instead of to the right */
-    .theme-submenu {
+.theme-submenu {
         top: 100% !important;
         right: auto !important;
         left: 0 !important;
@@ -1304,75 +704,51 @@ input[type="text"] {
         transform: translateY(10px) !important;
     }
 
-    .theme-submenu.active {
+.theme-submenu.active {
         transform: translateY(0) !important;
-    }
-}
+    }}
 
-@media (max-width: 480px) {
-    .theme-toggle-btn {
+@media (max-width: 480px){.theme-toggle-btn {
         width: 36px;
         height: 36px;
     }
 
-    .theme-icon {
+.theme-icon {
         font-size: 18px;
     }
 
-    .loading-overlay p {
+.loading-overlay p {
         font-size: 14px;
-    }
-}
+    }}
 
-/* ================================================
-   Print Styles
-   ================================================ */
-
-@media print {
-    .theme-toggle-container {
+@media print{.theme-toggle-container {
         display: none !important;
     }
 
-    .loading-overlay {
+.loading-overlay {
         display: none !important;
-    }
-}
+    }}
 
-/* ================================================
-   Accessibility
-   ================================================ */
-
-/* Focus styles for keyboard navigation */
 .theme-toggle-btn:focus-visible {
     outline: 3px solid var(--accent-color);
     outline-offset: 2px;
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    *,
+@media (prefers-reduced-motion: reduce){*,
     *::before,
     *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
-    }
-}
+    }}
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    :root {
+@media (prefers-contrast: high){:root {
         --border-color: #000000;
     }
 
-    [data-theme="dark"] {
+[data-theme="dark"] {
         --border-color: #ffffff;
-    }
-}
-
-/* ================================================
-   Notifications
-   ================================================ */
+    }}
 
 .notification {
     position: fixed;
@@ -1436,25 +812,21 @@ input[type="text"] {
     border: 1px solid var(--border-color);
 }
 
-/* Responsive Design
-   ================================================ */
-
-@media (max-width: 768px) {
-    .settings-menu-container {
+@media (max-width: 768px){.settings-menu-container {
         bottom: 15px;
         left: 15px;
     }
 
-    .settings-btn {
+.settings-btn {
         width: 45px;
         height: 45px;
     }
 
-    .settings-icon {
+.settings-icon {
         font-size: 20px;
     }
 
-    .settings-dropdown {
+.settings-dropdown {
         min-width: 180px;
         bottom: 55px;
         background-color: var(--bg-secondary) !important;
@@ -1464,94 +836,74 @@ input[type="text"] {
         -webkit-backdrop-filter: none !important;
     }
 
-    [data-theme="light"] .settings-dropdown {
+[data-theme="light"] .settings-dropdown {
         background-color: #ffffff !important;
         background: #ffffff !important;
         border-color: #e5e5e5 !important;
     }
 
-    [data-theme="dark"] .settings-dropdown {
+[data-theme="dark"] .settings-dropdown {
         background-color: #1a1a1a !important;
         background: #1a1a1a !important;
         border-color: #2a2a2a !important;
     }
 
-    .settings-dropdown-item {
+.settings-dropdown-item {
         padding: 10px 14px;
         font-size: 13px;
     }
 
-    .key-modal-content {
+.key-modal-content {
         max-width: 350px;
         padding: 20px;
     }
 
-    /* Make spreadsheet more mobile-friendly */
-    .luckysheet-container {
-        font-size: 14px;
-    }
-
-    .notification {
+.notification {
         bottom: 20px;
         min-width: 280px;
         padding: 14px 20px;
         font-size: 13px;
-    }
-}
+    }}
 
-@media (max-width: 480px) {
-    .settings-btn {
+@media (max-width: 480px){.settings-btn {
         width: 40px;
         height: 40px;
     }
 
-    .settings-icon {
+.settings-icon {
         font-size: 18px;
     }
 
-    .settings-dropdown {
+.settings-dropdown {
         min-width: 160px;
     }
 
-    .key-modal-content {
+.key-modal-content {
         max-width: 300px;
         padding: 16px;
     }
 
-    .loading-overlay p {
+.loading-overlay p {
         font-size: 14px;
-    }
-}
+    }}
 
-/* ================================================
-   Print Styles
-   ================================================ */
-
-@media print {
-    .settings-menu-container {
+@media print{.settings-menu-container {
         display: none !important;
     }
 
-    .loading-overlay {
+.loading-overlay {
         display: none !important;
     }
 
-    .key-modal {
+.key-modal {
         display: none !important;
-    }
-}
+    }}
 
-/* ================================================
-   Responsive Design
-   ================================================ */
-
-/* Dark mode adjustments for notifications */
 [data-theme="dark"] .notification-error {
     background-color: rgba(220, 38, 38, 0.15);
     color: #ef4444;
 }
 
-/* Icon positioning for notifications */
 .notification::before {
     content: '';
     width: 8px;
@@ -1572,10 +924,6 @@ input[type="text"] {
     background-color: var(--text-secondary);
 }
 
-/* ================================================
-   Key Info Modal
-   ================================================ */
-
 .key-modal {
     position: fixed;
     top: 0;
@@ -1592,7 +940,6 @@ input[type="text"] {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Adjust modal background for dark theme */
 [data-theme="dark"] .key-modal {
     background-color: rgba(0, 0, 0, 0.7);
 }
@@ -1614,7 +961,6 @@ input[type="text"] {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Ensure dark theme colors apply properly */
 [data-theme="dark"] .key-modal-content {
     background-color: var(--bg-secondary);
     border-color: var(--border-color);
@@ -1640,7 +986,6 @@ input[type="text"] {
     letter-spacing: -0.01em;
 }
 
-/* Ensure title color reflects theme */
 [data-theme="dark"] .key-modal-title {
     color: var(--text-primary);
 }
@@ -1685,7 +1030,6 @@ input[type="text"] {
     margin-bottom: 8px;
 }
 
-/* Ensure dark theme colors apply properly */
 [data-theme="dark"] .key-display {
     background-color: var(--bg-tertiary);
     border-color: var(--border-color);
@@ -1725,7 +1069,6 @@ input[type="text"] {
     transform: scale(0.95);
 }
 
-/* Ensure copy button reflects theme */
 [data-theme="dark"] .key-copy-btn {
     color: var(--text-secondary);
 }
@@ -1770,7 +1113,6 @@ input[type="text"] {
     color: var(--accent-color);
 }
 
-/* Ensure dark theme colors apply properly */
 [data-theme="dark"] .key-modal-close-btn {
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
@@ -1782,10 +1124,6 @@ input[type="text"] {
     border-color: var(--accent-color);
     color: var(--accent-color);
 }
-
-/* ================================================
-   Delete Account Modal Styles
-   ================================================ */
 
 #deleteAccountModal .key-modal-content {
     max-width: 450px;
@@ -1884,10 +1222,6 @@ input[type="text"] {
     transform: translateY(0);
 }
 
-/* ================================================
-   Text Color Utilities for Delete Account
-   ================================================ */
-
 .text-red-600 {
     color: #dc2626;
 }
@@ -1940,10 +1274,6 @@ input[type="text"] {
     justify-content: flex-end;
 }
 
-/* ================================================
-   Share Modal Styles
-   ================================================ */
-
 .share-modal-content {
     max-width: 500px;
 }
@@ -1982,10 +1312,6 @@ input[type="text"] {
     background-color: var(--accent-color);
     color: white;
 }
-
-/* ================================================
-   Shared Page Styles
-   ================================================ */
 
 .shared-badge {
     padding: 6px 12px;
@@ -2027,10 +1353,6 @@ input[type="text"] {
     color: var(--text-secondary);
     margin: 0;
 }
-
-/* ================================================
-   Share Modal Styles - Modern & Clean
-   ================================================ */
 
 .share-modal-overlay {
     position: fixed;
@@ -2275,29 +1597,98 @@ input[type="text"] {
     transform: scale(0.98);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .share-modal {
+@media (max-width: 768px){.share-modal {
         max-width: 400px;
     }
 
-    .share-modal-header,
+.share-modal-header,
     .share-modal-body,
     .share-modal-footer {
         padding: 20px;
     }
 
-    .share-modal-url-container {
+.share-modal-url-container {
         flex-direction: column;
     }
 
-    .share-modal-url-input {
+.share-modal-url-input {
         width: 100%;
     }
 
-    .share-modal-copy-btn {
+.share-modal-copy-btn {
         width: 100%;
         justify-content: center;
         padding: 12px;
-    }
+    }}
+/* ================================================
+   Spreadsheet Container (Univer)
+   ================================================ */
+
+.univer-container,
+.luckysheet-container {
+    width: 100%;
+    height: calc(100vh - 44px);
+    position: relative;
+    margin-top: 44px;
+}
+
+.univer-container .univer-root,
+#luckysheet > div {
+    height: 100%;
+}
+
+/* Excel-style: left-align the ribbon tabs (Start / Formulas / Data).
+   Univer centers them by default; scope the override to our container. */
+#univer header .univer-h-9 > [class*="univer-justify-center"] {
+    justify-content: flex-start;
+}
+
+/* ================================================
+   Legacy Spreadsheet Notice
+   ================================================ */
+
+.legacy-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 24px;
+    background-color: var(--bg-secondary);
+}
+
+.legacy-notice-card {
+    max-width: 460px;
+    text-align: center;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 36px 32px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.legacy-notice-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.legacy-notice-card h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+}
+
+.legacy-notice-card p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0 0 10px 0;
+}
+
+.legacy-note {
+    opacity: 0.85;
+}
+
+.legacy-notice-card .home-cancel-btn {
+    margin-top: 14px;
 }

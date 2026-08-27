@@ -1,6 +1,6 @@
 # Grids - Modern Spreadsheet Application
 
-A modern, responsive spreadsheet application built with Luckysheet, featuring Excel-like functionality with beautiful dark and light themes.
+A modern, responsive spreadsheet application built with Univer, featuring Excel-like functionality with beautiful dark and light themes.
 
 ## Features
 
@@ -15,7 +15,6 @@ A modern, responsive spreadsheet application built with Luckysheet, featuring Ex
   - Number calculations and formulas (=A1+B1, =SUM(), =AVERAGE(), etc.)
   - Multiple sheets support
   - Cell formatting (bold, italic, colors, borders)
-  - Charts and visualizations
   - Import/Export (Excel, CSV)
   - Undo/Redo operations
   - Freeze rows and columns
@@ -110,7 +109,7 @@ grids/
 │   ├── login-handler.js # Login form handler
 │   ├── home.js         # Dashboard functionality
 │   ├── shared.js       # Shared spreadsheet viewer
-│   ├── spreadsheet.js  # Luckysheet wrapper
+│   ├── spreadsheet.js  # Univer wrapper
 │   ├── storage.js      # Data persistence layer
 │   ├── themes.js       # Theme management
 │   └── pwa.js          # Progressive Web App
@@ -123,23 +122,6 @@ grids/
 
 ## Deployment
 
-### Vercel Deployment
-
-The project is configured for Vercel deployment:
-
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    }
-  ]
-}
-```
 
 ### Key Features for Deployment
 
@@ -155,7 +137,7 @@ The project is configured for Vercel deployment:
 - Client-side and server-side key hashing
 - Session management with sessionStorage
 - Theme management (light/dark/system modes)
-- Spreadsheet operations via Luckysheet
+- Spreadsheet operations via Univer
 - Data persistence (localStorage and TextDB)
 - Auto-save functionality (every 30 seconds)
 - Import/Export (Excel, CSV)
@@ -176,7 +158,7 @@ The project is configured for Vercel deployment:
 - **js/shared.js**: Read-only shared spreadsheet viewer
 - **js/storage.js**: Data persistence with localStorage and TextDB
 - **js/themes.js**: Theme switching and persistence
-- **js/spreadsheet.js**: Luckysheet wrapper and operations
+- **js/spreadsheet.js**: Univer wrapper and operations
 
 ## Keyboard Shortcuts
 
@@ -201,14 +183,14 @@ MIT License - feel free to use this for your own projects.
 
 ## Credits
 
-- Built with [Luckysheet](https://github.com/mengshukeji/Luckysheet) - An excellent spreadsheet library
+- Built with [Univer](https://github.com/dream-num/univer) - All-in-one spreadsheet framework by the Luckysheet team
 - Icons from SVG libraries
 - Fonts from Google Fonts (Inter)
 
 ## Support
 
 For issues or questions:
-- Review Luckysheet documentation: https://mengshukeji.github.io/LuckysheetDocs/zh/
+- Review Univer documentation: https://docs.univer.ai/
 
 ## Roadmap
 

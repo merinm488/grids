@@ -146,13 +146,13 @@ class ThemeManager {
         // Validate theme name
         // Update DOM with theme attribute
         // Save to localStorage
-        // Update Luckysheet styles if needed
+        // Update spreadsheet editor theme if loaded
         // Update toggle button state
 
         if (this.isValidTheme(themeName)){
             this.applyTheme(themeName);
             this.saveTheme(themeName);
-            this.updateLuckysheetStyles(themeName);
+            this.updateSpreadsheetTheme(themeName);
             this.updateToggleButtonState();
         }
         else {
@@ -206,7 +206,6 @@ class ThemeManager {
      */
     applyTheme(themeName) {
         // Set data-theme attribute on document
-        // Handle Luckysheet theme overrides
         document.documentElement.setAttribute('data-theme',themeName);
         this.currentTheme = themeName;
     }
@@ -222,15 +221,14 @@ class ThemeManager {
     }
 
     /**
-     * Update Luckysheet styles for theme
-     * Apply theme-specific Luckysheet overrides
+     * Update the spreadsheet editor theme (if the engine is present)
+     * Applies dark/light mode to the Univer instance
      * @param {string} themeName - Current theme
      */
-    updateLuckysheetStyles(themeName) {
-        const themeInfo = this.getThemeInfo(themeName);
-        if(themeInfo){
-            document.documentElement.style.setProperty('--luckysheet-color-primary', themeInfo.primary);
-            document.documentElement.style.setProperty('--luckysheet-color-accent', themeInfo.accent);
+    updateSpreadsheetTheme(themeName) {
+        // Sync Univer's own dark mode with the app theme
+        if (window.spreadsheetManager && typeof spreadsheetManager.applyTheme === 'function') {
+            spreadsheetManager.applyTheme(themeName);
         }
     }
 

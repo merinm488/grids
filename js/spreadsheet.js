@@ -1,18 +1,20 @@
 /**
  * ================================================
- * GRIDS - Spreadsheet Module
+ * GRIDS - Spreadsheet Module (Univer)
  * ================================================
- * Manages Luckysheet spreadsheet functionality including:
+ * Manages the Univer spreadsheet engine (successor of Luckysheet):
  * - Initialization and configuration
  * - Data operations (load, save, export)
  * - Cell formulas and calculations
  * - Multi-sheet management
- * - Charts and visualizations
- * - Import/Export functionality
+ * - Import/Export (via SheetJS community edition)
  * - Undo/Redo operations
  * - Freeze rows/columns
  *
- * Implement all spreadsheet operations
+ * Storage format (v2): spreadsheet.data is a plain Univer workbook
+ * snapshot (IWorkbookData) - a JSON object, NOT an array.
+ * Legacy Luckysheet saves (array of sheets with celldata) are detected
+ * and surfaced with a friendly notice instead of being rendered.
  */
 
 // ================================================
@@ -23,11 +25,19 @@ class SpreadsheetManager {
     constructor() {
         // Initialize spreadsheet manager
         this.container = null;
-        this.data = null;
+        this.univerAPI = null;      // FUniver facade
+        this.fWorkbook = null;      // Active FWorkbook
         this.currentSheetId = null;
-        this.options = null;
         this.isInitialized = false;
         this.currentSpreadsheetMetadata = null; // Cache spreadsheet metadata
+        this.changeDisposables = [];            // Univer event subscriptions
+        this.changeListenersEnabled = false;
+        this.legacyNoticeShown = false;
+        this.darkModeOn = false;
+
+        // Default grid dimensions (kept from previous version)
+        this.defaultRowCount = APP_CONFIG.spreadsheet.default.row;
+        this.defaultColumnCount = APP_CONFIG.spreadsheet.default.column;
     }
 
     // ================================================
@@ -35,42 +45,90 @@ class SpreadsheetManager {
     // ================================================
 
     /**
-     * Initialize Luckysheet
-     * Set up Luckysheet with configuration
-     * @param {object} initialData - Initial spreadsheet data
-     * @returns {Promise<boolean>} Success status
+     * Initialize the Univer application and load data
+     * @param {object} initialData - Workbook snapshot (or null for empty)
+     * @param {string} workbookName - Name shown in the editor
+     * @returns {Promise<{ok: boolean, legacy: boolean}>} Result status
      */
-    async initialize(initialData = null) {
-        let containerElement = document.getElementById(APP_CONFIG.spreadsheet.container);
-        if (containerElement === null){
+    async initialize(initialData = null, workbookName = 'Untitled Spreadsheet') {
+        const containerElement = document.getElementById(APP_CONFIG.spreadsheet.container);
+        if (containerElement === null) {
             console.error('[SPREADSHEET] Container element not found:', APP_CONFIG.spreadsheet.container);
             this.showError('Spreadsheet container not found');
-            return false;
+            return { ok: false, legacy: false };
+        }
+        this.container = containerElement;
+
+        // Legacy Luckysheet payloads are arrays of sheet objects
+        if (Array.isArray(initialData)) {
+            console.warn('[SPREADSHEET] Legacy Luckysheet data detected');
+            this.hideLoading();
+            this.showLegacyNotice();
+            return { ok: false, legacy: true };
         }
 
-        this.container = containerElement;
         this.showLoading();
 
-        // Store data BEFORE creating Luckysheet
-        this.data = initialData || this.createDefaultData();
-
-        let options = this.buildOptions(this.data);
-
         try {
-            luckysheet.create(options);
+            if (!this.univerAPI) {
+                this.createUniverInstance();
+            }
 
-            // Wait a bit for Luckysheet to render
-            await new Promise(resolve => setTimeout(resolve, 200));
+            const snapshot = initialData || this.createDefaultData(workbookName);
+
+            // Dispose any previously open unit before creating another one
+            this.disposeCurrentWorkbook();
+
+            this.fWorkbook = this.univerAPI.createWorkbook(snapshot);
+            this.syncEditorTheme();
 
             this.isInitialized = true;
             this.hideLoading();
-            return true;
+            return { ok: true, legacy: false };
         } catch (error) {
-            console.error('[SPREADSHEET] Luckysheet initialization error:', error);
+            console.error('[SPREADSHEET] Univer initialization error:', error);
             this.hideLoading();
             this.showError('Failed to initialize spreadsheet. Please refresh the page.');
-            return false;
+            return { ok: false, legacy: false };
         }
+    }
+
+    /**
+     * Create the singleton Univer instance bound to the container
+     */
+    createUniverInstance() {
+        if (typeof UniverPresets === 'undefined') {
+            throw new Error('Univer library not loaded');
+        }
+
+        const { createUniver } = UniverPresets;
+        const { LocaleType, mergeLocales } = UniverCore;
+        const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
+
+        const { univerAPI } = createUniver({
+            locale: LocaleType.EN_US,
+            locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
+            presets: [UniverSheetsCorePreset({
+                container: APP_CONFIG.spreadsheet.container,
+            })],
+        });
+
+        this.univerAPI = univerAPI;
+    }
+
+    /**
+     * Destroy the currently open workbook (keeps the Univer app alive)
+     */
+    disposeCurrentWorkbook() {
+        if (this.univerAPI && this.fWorkbook) {
+            try {
+                this.univerAPI.disposeUnit(this.fWorkbook.getId());
+            } catch (error) {
+                console.warn('[SPREADSHEET] Error disposing previous workbook:', error);
+            }
+            this.fWorkbook = null;
+        }
+        this.stopChangeTracking();
     }
 
     /**
@@ -94,60 +152,95 @@ class SpreadsheetManager {
     }
 
     /**
-     * Build Luckysheet options object
-     * Construct options from APP_CONFIG
-     * @returns {object} Luckysheet options
+     * Friendly notice for spreadsheets created with the older
+     * Luckysheet-based version of Grids. Their data is left untouched.
      */
-    buildOptions(data = null) {
-        // Build and return Luckysheet configuration
-        // Include: container, data, title, lang, etc.
-        let sheetData;
-        if (data === null){
-            sheetData = this.createDefaultData();
-        } else {
-            sheetData = data;
+    showLegacyNotice() {
+        if (this.legacyNoticeShown) return;
+        this.legacyNoticeShown = true;
+
+        const container = document.getElementById(APP_CONFIG.spreadsheet.container);
+        if (!container) return;
+
+        const isSharedView = !document.getElementById('saveBtn');
+        container.innerHTML = `
+            <div class="legacy-notice">
+                <div class="legacy-notice-card">
+                    <div class="legacy-notice-icon">📊</div>
+                    <h2>Created with an older version of Grids</h2>
+                    <p>This spreadsheet was made with the previous Grids engine and can no longer be opened here.</p>
+                    <p class="legacy-note">Your data is safe and untouched in your account.</p>
+                    ${isSharedView
+                        ? '<button class="home-cancel-btn" id="legacyCloseBtn">Close</button>'
+                        : '<button class="home-cancel-btn" id="legacyHomeBtn">Back to Home</button>'}
+                </div>
+            </div>
+        `;
+
+        const homeBtn = document.getElementById('legacyHomeBtn');
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                window.location.href = '/home.html';
+            });
         }
-        let options = {};
-        options.container = APP_CONFIG.spreadsheet.container;
-        // Set the data property
-        options.data = sheetData;
-        // Set basic display properties
-        options.title = APP_CONFIG.name;
-        options.lang = APP_CONFIG.spreadsheet.lang;
-        options.showinfobar = APP_CONFIG.spreadsheet.showinfobar;
-        options.showsheetbar = APP_CONFIG.spreadsheet.showsheetbar;
-        options.showstatisticBar = APP_CONFIG.spreadsheet.showstatisticBar;
-        // Set feature enabling properties
-        options.enableAddRow = APP_CONFIG.spreadsheet.enableAddRow;
-        options.enableAddBackTop = APP_CONFIG.spreadsheet.enableAddBackTop;
-        // Set user/folder properties
-        options.userInfo = APP_CONFIG.spreadsheet.userInfo;
-        options.myFolderUrl = APP_CONFIG.spreadsheet.myFolderUrl;
-
-        // Set default column width and row height
-        options.defaultColWidth = 73;
-        options.defaultRowHeight = 19;
-
-        return options;
     }
 
     /**
-     * Create default spreadsheet data
-     * Generate initial sheet structure
-     * @returns {object} Default spreadsheet data
+     * Build an empty workbook snapshot in the current storage format
+     * @param {string} name - Workbook name
+     * @returns {object} Univer workbook snapshot
      */
-    createDefaultData() {
-        const defaultSheet = {
-            name: 'Sheet1',
-            row: APP_CONFIG.spreadsheet.default.row,
-            column: APP_CONFIG.spreadsheet.default.column,
-            celldata: [],
-            luckysheet_select_save: [{ row: [0, 1], column: [0, 1] }],
-            luckysheet_selection_range: [],
-            luckysheet_defaultColWidth: 73,
-            luckysheet_defaultRowHeight: 19
+    createDefaultData(name = 'Untitled Spreadsheet') {
+        return this.buildEmptySheetSnapshot('sheet-1', 'Sheet1', name);
+    }
+
+    /**
+     * Create a snapshot containing one empty worksheet
+     * @param {string} sheetId - Worksheet id
+     * @param {string} sheetName - Worksheet name
+     * @param {string} workbookName - Workbook name
+     * @returns {object} Univer workbook snapshot
+     */
+    buildEmptySheetSnapshot(sheetId, sheetName, workbookName) {
+        return {
+            id: this.generateWorkbookId(),
+            name: workbookName,
+            appVersion: '0.25.1',
+            locale: 'enUS',
+            styles: {},
+            sheetOrder: [sheetId],
+            sheets: {
+                [sheetId]: {
+                    id: sheetId,
+                    name: sheetName,
+                    tabColor: '',
+                    hidden: 0,
+                    freeze: { xOffset: 0, yOffset: 0, startRow: -1, startColumn: -1, xSplit: 0, ySplit: 0 },
+                    rowCount: this.defaultRowCount,
+                    columnCount: this.defaultColumnCount,
+                    zoomRatio: 1,
+                    scrollTop: 0,
+                    scrollLeft: 0,
+                    defaultColumnWidth: 73,
+                    defaultRowHeight: 19,
+                    mergeData: [],
+                    cellData: {},
+                    rowData: {},
+                    columnData: {},
+                    rowHeader: { width: 46 },
+                    columnHeader: { height: 20 },
+                    rightToLeft: 0,
+                },
+            },
         };
-        return [defaultSheet];
+    }
+
+    /**
+     * Generate a unique workbook/unit id
+     * @returns {string} Unique id
+     */
+    generateWorkbookId() {
+        return `wb_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 11)}`;
     }
 
     // ================================================
@@ -155,67 +248,50 @@ class SpreadsheetManager {
     // ================================================
 
     /**
-     * Load spreadsheet data
-     * Load data into Luckysheet
-     * @param {object} data - Spreadsheet data
-     * @returns {Promise<boolean>} Success status
+     * Load spreadsheet data into the editor
+     * Accepts a Univer snapshot (object). Legacy arrays are rejected
+     * with the friendly notice.
+     * @param {object} data - Workbook snapshot
+     * @param {string} workbookName - Fallback name
+     * @returns {Promise<{ok: boolean, legacy: boolean}>}
      */
-    async loadData(data) {
-        if(!this.validateData(data)){
-            console.error('[SPREADSHEET] Invalid data structure:', data);
-            return false;
+    async loadData(data, workbookName = 'Untitled Spreadsheet') {
+        if (Array.isArray(data)) {
+            this.hideLoading();
+            this.showLegacyNotice();
+            return { ok: false, legacy: true };
         }
 
-        try {
-            if(!this.isInitialized){
-                const success = await this.initialize(data);
-                if (!success) {
-                    console.error('[SPREADSHEET] Failed to initialize');
-                    return false;
-                }
-                return true;
-            } else {
-                luckysheet.destroy();
-                this.isInitialized = false;
-                // Wait for destruction to complete
-                await new Promise(resolve => setTimeout(resolve, 100));
-                const success = await this.initialize(data);
-                if (!success) {
-                    console.error('[SPREADSHEET] Failed to reinitialize');
-                    return false;
-                }
-                return true;
-            }
-        } catch (error) {
-            console.error('[SPREADSHEET] Error in loadData:', error);
-            this.hideLoading();
-            return false;
+        if (!data || typeof data !== 'object' || !data.sheets) {
+            console.error('[SPREADSHEET] Invalid snapshot structure:', data);
+            return { ok: false, legacy: false };
         }
+
+        const result = await this.initialize(data, workbookName);
+        return result;
     }
 
     /**
-     * Get current spreadsheet data
-     * Extract data from Luckysheet
-     * @returns {object} Current spreadsheet data
+     * Get current workbook snapshot (the persisted form)
+     * @returns {object|null} Workbook snapshot
      */
     getData() {
-        // Use Luckysheet API to get all sheet data
-        // Return structured data object
-        if (!this.isInitialized)
-            return [];
-        return luckysheet.getAllSheets();
+        if (!this.isInitialized || !this.fWorkbook) return null;
+        try {
+            return this.fWorkbook.save();
+        } catch (error) {
+            console.error('[SPREADSHEET] Failed to serialize workbook:', error);
+            return null;
+        }
     }
 
     /**
-     * Get current sheet data
-     * Get active sheet data only
-     * @returns {object} Current sheet data
+     * Get the active worksheet facade
+     * @returns {object|null} FWorksheet
      */
     getCurrentSheetData() {
-        // Get active sheet using Luckysheet API
-        if(!this.isInitialized)
-            return null;
-        return luckysheet.getSheet();
+        if (!this.isInitialized || !this.fWorkbook) return null;
+        return this.fWorkbook.getActiveSheet();
     }
 
     /**
@@ -227,13 +303,21 @@ class SpreadsheetManager {
     }
 
     /**
+     * Whether the last load attempt hit a legacy Luckysheet file
+     * @returns {boolean}
+     */
+    isLegacyBlocked() {
+        return this.legacyNoticeShown;
+    }
+
+    /**
      * Save spreadsheet data
-     * Save current state to storage using cached metadata
+     * Persist current state to storage using cached metadata
      * @returns {Promise<boolean>} Success status
      */
     async save() {
-        const currentSheetData = this.getData();
-        if(!currentSheetData || !this.currentSheetId){
+        const snapshot = this.getData();
+        if (!snapshot || !this.currentSheetId) {
             console.error('[SPREADSHEET] Error saving - no data or sheet ID');
             return false;
         }
@@ -248,7 +332,8 @@ class SpreadsheetManager {
         const spreadsheetData = {
             id: this.currentSheetId,
             name: existingSpreadsheet.name || 'Untitled Spreadsheet',
-            data: currentSheetData,
+            data: snapshot,
+            formatVersion: 2,
             createdAt: existingSpreadsheet.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sharedId: existingSpreadsheet.sharedId || null
@@ -285,9 +370,9 @@ class SpreadsheetManager {
             this.currentSheetId = id;
 
             // Get specific spreadsheet from user data
-            let spreadsheetData = await gridsStorage.getSpreadsheet(id);
+            const spreadsheetData = await gridsStorage.getSpreadsheet(id);
 
-            if(!spreadsheetData){
+            if (!spreadsheetData) {
                 console.error('[SPREADSHEET] No spreadsheet data found for ID:', id);
                 this.currentSheetId = null;
                 this.hideLoading();
@@ -303,28 +388,16 @@ class SpreadsheetManager {
                 sharedId: spreadsheetData.sharedId || null
             };
 
-            // Extract the actual spreadsheet data from the stored object
-            let data = spreadsheetData.data || spreadsheetData;
+            // Extract the spreadsheet body
+            let body = spreadsheetData.data || spreadsheetData;
 
-            // If data is an array (multiple sheets), use it directly
-            let sheetData = Array.isArray(data) ? data : (data.data || data);
-
-            if (!sheetData || sheetData.length === 0) {
-                console.error('[SPREADSHEET] Invalid or empty sheet data');
-                this.currentSheetId = null;
-                this.hideLoading();
+            const result = await this.loadData(body, spreadsheetData.name);
+            if (!result.ok) {
+                this.currentSheetId = result.legacy ? id : null;
                 return false;
             }
 
-            const loadSuccess = await this.loadData(sheetData);
-            if (!loadSuccess) {
-                console.error('[SPREADSHEET] Failed to load data into Luckysheet');
-                this.currentSheetId = null;
-                this.hideLoading();
-                return false;
-            }
-
-            this.data = sheetData;
+            this.data = body;
             this.hideLoading();
             return true;
         } catch (error) {
@@ -336,77 +409,182 @@ class SpreadsheetManager {
     }
 
     // ================================================
+    // Change Tracking (auto-save support)
+    // ================================================
+
+    /**
+     * Start listening for user edits so the app can mark unsaved changes.
+     *
+     * Filtering strategy:
+     * - Commands of type OPERATION are transient UI state (selection,
+     *   scroll, active-cell) and never represent document edits.
+     * - Internal bookkeeping namespaces (formula engine triggers,
+     *   rich-text editing previews) are ignored.
+     * - Everything else (COMMAND/MUTATION like set-range-values,
+     *   set-style, insert-row, set-frozen, sheet CRUD) marks the
+     *   document dirty.
+     *
+     * Arming strategy: listeners attach immediately but stay muted
+     * until the workbook has been quiet for ~0.8s and at least 2s
+     * have passed since init - so snapshot hydration on slow boots
+     * does not register as a user edit.
+     */
+    startChangeTracking(onChange) {
+        if (!this.univerAPI || typeof onChange !== 'function') return;
+
+        this.stopChangeTracking();
+        this.onChangeCallback = onChange;
+
+        // Mutations fired purely by internal subsystems, not user intent
+        const ignoredMutations = [
+            'formula.mutation.',
+            'doc.mutation.rich-text-editing',
+        ];
+
+        const disposable = this.univerAPI.onCommandExecuted((command) => {
+            if (!command || typeof command.id !== 'string') return;
+
+            const id = command.id;
+            const now = Date.now();
+            this.lastCommandAt = now;
+
+            if (!this.changeListenersEnabled) return;
+
+            // OPERATION = ephemeral view state, never document content
+            const CommandTypeRef = (typeof UniverCore !== 'undefined' && UniverCore.CommandType)
+                ? UniverCore.CommandType : null;
+            if (CommandTypeRef && command.type === CommandTypeRef.OPERATION) return;
+
+            if (ignoredMutations.some(prefix => id.startsWith(prefix))) return;
+
+            onChange();
+        });
+
+        this.changeDisposables.push(disposable);
+
+        // Arm on quiescence rather than a fixed delay
+        this.changeTrackingStartedAt = Date.now();
+        this.lastCommandAt = Date.now();
+        const armTimer = setInterval(() => {
+            const elapsed = Date.now() - this.changeTrackingStartedAt;
+            const quietFor = Date.now() - this.lastCommandAt;
+            if (elapsed >= 2000 && quietFor >= 800) {
+                clearInterval(armTimer);
+                this.changeListenersEnabled = true;
+            }
+        }, 250);
+        this.changeDisposables.push({ dispose: () => clearInterval(armTimer) });
+    }
+
+    /**
+     * Remove all change-tracking subscriptions
+     */
+    stopChangeTracking() {
+        this.changeDisposables.forEach(d => {
+            try { d && d.dispose && d.dispose(); } catch (e) { /* noop */ }
+        });
+        this.changeDisposables = [];
+        this.changeListenersEnabled = false;
+    }
+
+    // ================================================
+    // Theme
+    // ================================================
+
+    /**
+     * Apply app theme to the editor (light/dark)
+     * @param {string} themeName - 'light' or 'dark'
+     */
+    applyTheme(themeName) {
+        const wantDark = themeName === 'dark';
+        if (this.univerAPI && wantDark !== this.darkModeOn) {
+            this.univerAPI.toggleDarkMode();
+            this.darkModeOn = wantDark;
+        }
+        document.documentElement.style.setProperty('--grid-accent', 'var(--accent-color)');
+    }
+
+    /**
+     * Sync editor theme with the app-wide data-theme attribute
+     */
+    syncEditorTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        if (current) this.applyTheme(current);
+    }
+
+    // ================================================
     // Sheet Operations
     // ================================================
 
     /**
      * Add new sheet
-     * Create new sheet in spreadsheet
      * @param {string} name - Sheet name
-     * @returns {string} New sheet ID
+     * @returns {string|null} New sheet ID
      */
     addSheet(name = null) {
-        // Use Luckysheet API to add sheet
-        // Generate unique name if not provided
-        if (name === null){
+        if (!this.ready()) return null;
+        if (name === null) {
             name = this.generateSheetName();
         }
-
-        const sheetObject = luckysheet.setSheetAdd({name: name});
-        return sheetObject.id;
+        const sheet = this.fWorkbook.insertSheet(name);
+        return sheet ? sheet.getSheetId() : null;
     }
 
     /**
-     * Delete current sheet
-     * Remove active sheet
+     * Delete the active sheet
      * @returns {boolean} Success status
      */
     deleteSheet() {
-        // Use Luckysheet API to delete sheet
-        // Prevent deleting last sheet
-        if (luckysheet.getAllSheets().length === 1){
-            console.error('Cannot delete the last sheet');
+        if (!this.ready()) return false;
+
+        // Prevent deleting the last remaining sheet
+        if (this.fWorkbook.getNumSheets() <= 1) {
+            console.error('[SPREADSHEET] Cannot delete the last sheet');
             return false;
         }
-        luckysheet.setSheetDelete(luckysheet.getSheet().id);
-        return true;
+
+        // Activate another sheet first - Univer requires a surviving active sheet
+        const doomedId = this.fWorkbook.getActiveSheet().getSheetId();
+        const surviving = this.fWorkbook.getSheets().find(s => s.getSheetId() !== doomedId);
+        if (surviving) {
+            this.fWorkbook.setActiveSheet(surviving);
+        }
+
+        return this.fWorkbook.deleteSheet(doomedId);
     }
 
     /**
      * Rename sheet
-     * Change sheet name
      * @param {string} sheetId - Sheet ID
      * @param {string} newName - New name
      * @returns {boolean} Success status
      */
     renameSheet(sheetId, newName) {
-        // Use Luckysheet API to rename sheet
-        luckysheet.setSheetRename(sheetId,newName);
+        if (!this.ready()) return false;
+        const sheet = this.fWorkbook.getSheetBySheetId(sheetId);
+        if (!sheet) return false;
+        sheet.setName(newName);
         return true;
     }
 
     /**
-     * Duplicate sheet
-     * Copy current sheet
-     * @returns {string} New sheet ID
+     * Duplicate the active sheet
+     * @returns {string|null} New sheet ID
      */
     duplicateSheet() {
-        // Copy active sheet data
-        // Create new sheet with copied data
-        let currentSheetData = luckysheet.getSheet();
-        currentSheetData.name = this.generateSheetName();
-        let sheetCopy = luckysheet.setSheetAdd(currentSheetData);
-        return sheetCopy.id;
+        if (!this.ready()) return false;
+        const copy = this.fWorkbook.duplicateActiveSheet();
+        return copy ? copy.getSheetId() : null;
     }
 
     /**
      * Switch to sheet
-     * Change active sheet
      * @param {string} sheetId - Target sheet ID
      */
     switchSheet(sheetId) {
-        // Use Luckysheet API to switch sheets
-        luckysheet.setSheetActivate(sheetId);
+        if (!this.ready()) return;
+        const sheet = this.fWorkbook.getSheetBySheetId(sheetId);
+        if (sheet) this.fWorkbook.setActiveSheet(sheet);
     }
 
     // ================================================
@@ -415,59 +593,87 @@ class SpreadsheetManager {
 
     /**
      * Get cell value
-     * Read cell data
      * @param {string} cell - Cell reference (e.g., 'A1')
-     * @returns {string|number} Cell value
+     * @returns {string|number|null} Cell value
      */
     getCellValue(cell) {
-        // Use Luckysheet API to get cell value
-        let cellIndex = this.cellToIndex(cell);
-        return luckysheet.getCellValue(cellIndex.row, cellIndex.column);
+        if (!this.ready()) return null;
+        const ref = this.resolveRangeRef(cell);
+        return ref ? ref.getValue() : null;
     }
 
     /**
-     * Set cell value
-     * Write cell data
+     * Set cell value (formulas starting with '=' are written as formulas)
      * @param {string} cell - Cell reference (e.g., 'A1')
      * @param {string|number} value - Value to set
      */
     setCellValue(cell, value) {
-        // Use Luckysheet API to set cell value
-        const cellIndex = this.cellToIndex(cell);
-        return luckysheet.setCellValue(cellIndex.row, cellIndex.column,value);
+        if (!this.ready()) return;
+        const ref = this.resolveRangeRef(cell);
+        if (!ref) return;
 
+        if (typeof value === 'string' && value.startsWith('=')) {
+            ref.setFormula(value);
+        } else {
+            ref.setValue(value);
+        }
     }
 
     /**
      * Get selected cells
-     * Get current selection
-     * @returns {Array} Array of cell references
+     * @returns {object|null} Active FRange selection
      */
     getSelectedCells() {
-        // Use Luckysheet API to get selection
-        return luckysheet.getRange();
+        if (!this.ready()) return null;
+        return this.getCurrentSheetData().getActiveRange();
     }
 
     /**
      * Format cells
-     * Apply formatting to cells
+     * Apply formatting to cells ('A1' or 'A1:B2')
      * @param {string|Array} cells - Cell reference(s)
-     * @param {object} format - Format options
+     * @param {object} format - Format options ({fontWeight, fontStyle, background, fontColor, ...})
      */
     formatCells(cells, format) {
-        // Apply formatting (bold, italic, color, etc.)
-        const cellFormat = this.cellToIndex(cells);
-        return luckysheet.setCellFormat(cellFormat.row, cellFormat.column, format);
+        if (!this.ready()) return;
+        const ranges = Array.isArray(cells) ? cells : [cells];
+        ranges.forEach(refStr => {
+            const range = this.resolveRangeRef(refStr);
+            if (!range) return;
+            if (format.fontWeight) range.setFontWeight(format.fontWeight);
+            if (format.fontStyle) range.setFontStyle(format.fontStyle);
+            if (format.background) range.setBackground(format.background);
+            if (format.fontColor) range.setFontColor(format.fontColor);
+            if (format.fontSize) range.setFontSize(format.fontSize);
+            if (format.wrapStrategy) range.setWrapStrategy(format.wrapStrategy);
+        });
     }
 
     /**
-     * Merge cells
-     * Merge selected cells
-     * @param {string} type - Merge type ('merge', 'mergeAll', 'unmerge')
+     * Merge the active selection
+     * @param {string} type - 'merge' | 'mergeAll' | 'mergeHorizontally' | 'mergeVertically' | 'unmerge'
      */
     mergeCells(type = 'merge') {
-        // Use Luckysheet API to merge cells
-        luckysheet.setRangeMerge(type);
+        if (!this.ready()) return;
+        const range = this.getCurrentSheetData().getActiveRange();
+        if (!range) return;
+
+        switch (type) {
+            case 'mergeAll':
+                range.merge();
+                break;
+            case 'mergeHorizontally':
+                range.mergeAcross();
+                break;
+            case 'mergeVertically':
+                range.mergeVertically();
+                break;
+            case 'unmerge':
+                range.breakApart();
+                break;
+            default:
+                range.merge();
+        }
     }
 
     // ================================================
@@ -475,229 +681,226 @@ class SpreadsheetManager {
     // ================================================
 
     /**
-     * Execute formula
-     * Calculate formula result
+     * Execute a formula and return its calculated value.
+     * Uses a scratch cell that is cleared afterwards.
      * @param {string} formula - Formula string (e.g., '=SUM(A1:A10)')
-     * @returns {number} Formula result
+     * @returns {Promise<number|string|null>} Calculated value
      */
-    executeFormula(formula) {
-        // Use Luckysheet formula engine
-        return luckysheet.execFormula(formula);
+    async executeFormula(formula) {
+        if (!this.ready() || typeof formula !== 'string' || !formula.startsWith('=')) {
+            return null;
+        }
+
+        const ws = this.getCurrentSheetData();
+        const scratch = ws.getRange(this.defaultRowCount - 1, this.defaultColumnCount - 1);
+
+        scratch.setFormula(formula);
+
+        // Formulas evaluate asynchronously - poll briefly for the result
+        let value = null;
+        for (let attempt = 0; attempt < 20; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            value = scratch.getValue();
+            if (value !== null && value !== undefined && value !== '') break;
+        }
+
+        scratch.clearContents();
+        return value ?? null;
     }
 
     /**
-     * Get formula result
-     * Calculate and return formula value
-     * @param {string} cell - Cell with formula
-     * @returns {number} Formula result
-     */
-    getFormulaResult(cell) {
-        // Get formula and calculate result
-        const formula = this.getCellValue(cell);
-        return this.executeFormula(formula);
-    }
-
-    /**
-     * Update formulas
-     * Refresh all formula calculations
+     * Recalculate everything (no-op: Univer recalculates automatically)
      */
     refreshFormulas() {
-        // Trigger formula recalculation
-        luckysheet.refresh();
+        // Univer's formula engine keeps results in sync automatically
     }
 
     // ================================================
-    // Chart Operations
+    // Import / Export (real implementations via SheetJS)
     // ================================================
 
     /**
-     * Add chart
-     * Create chart from selected data
-     * @param {string} type - Chart type ('line', 'bar', 'pie', etc.)
-     * @param {Array} dataRange - Data range for chart
-     * @returns {string} Chart ID
-     */
-    addChart(type, dataRange) {
-        // Use Luckysheet chart API
-        return luckysheet.insertChart(type,dataRange);
-    }
-
-    /**
-     * Delete chart
-     * Remove chart from sheet
-     * @param {string} chartId - Chart ID
-     */
-    deleteChart(chartId) {
-        // Remove chart using Luckysheet API
-        luckysheet.deleteChart(chartId);
-    }
-
-    /**
-     * Update chart
-     * Modify chart properties
-     * @param {string} chartId - Chart ID
-     * @param {object} options - New chart options
-     */
-    updateChart(chartId, options) {
-        // Update chart configuration
-        luckysheet.modifyChart(chartId, options);
-    }
-
-    // ================================================
-    // Import/Export Operations
-    // ================================================
-
-    /**
-     * Import file
-     * Load data from file
+     * Import a CSV/XLSX file into the current workbook.
+     * Each file sheet becomes a workbook sheet.
      * @param {File} file - File to import
      * @returns {Promise<boolean>} Success status
      */
     async importFile(file) {
-        // Validate file type
+        if (!window.XLSX) {
+            console.error('[SPREADSHEET] SheetJS not available for import');
+            return false;
+        }
+
         const fileName = file.name.toLowerCase();
         if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-            console.error('Invalid file type. Only CSV and Excel files are supported.');
+            console.error('[SPREADSHEET] Invalid file type. Only CSV and Excel files are supported.');
             return false;
         }
-
-        const reader = new FileReader();
-        let fileContent;
 
         try {
-            fileContent = await new Promise((resolve, reject) => {
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(new Error('Failed to read file'));
+            const buffer = await file.arrayBuffer();
+            const parsed = XLSX.read(buffer, { type: 'array' });
 
-                // Read as text for CSV, as ArrayBuffer for Excel
-                if (fileName.endsWith('.csv')) {
-                    reader.readAsText(file);
-                } else {
-                    reader.readAsArrayBuffer(file);
-                }
+            // Start from a clean single-sheet workbook, then append parsed sheets
+            const baseName = fileName.replace(/\.(csv|xlsx|xls)$/, '') || 'Imported';
+            const snapshot = this.buildEmptySheetSnapshot('sheet-import-1', this.uniqueSheetName(parsed.SheetNames[0] || 'Sheet1'), baseName);
+            snapshot.sheetOrder = [];
+            snapshot.sheets = {};
+
+            parsed.SheetNames.forEach((sheetName, index) => {
+                const aoa = XLSX.utils.sheet_to_json(parsed.Sheets[sheetName], {
+                    header: 1,
+                    raw: true,
+                    defval: null,
+                });
+
+                const sheetId = `import-${index}-${Date.now().toString(36)}`;
+                const cellData = {};
+                aoa.forEach((row, r) => {
+                    if (!row) return;
+                    const rowMap = {};
+                    row.forEach((val, c) => {
+                        if (val === null || val === undefined || val === '') return;
+                        rowMap[c] = { v: val };
+                    });
+                    if (Object.keys(rowMap).length > 0) cellData[r] = rowMap;
+                });
+
+                snapshot.sheetOrder.push(sheetId);
+                snapshot.sheets[sheetId] = {
+                    ...snapshot.sheets[sheetId],
+                    id: sheetId,
+                    name: this.uniqueSheetName(sheetName),
+                    cellData,
+                };
             });
+
+            const totalRows = Object.keys(snapshot.sheets).length;
+            if (totalRows === 0) {
+                console.error('[SPREADSHEET] Import produced no sheets');
+                return false;
+            }
+
+            const result = await this.loadData(snapshot, baseName);
+            return result.ok;
         } catch (error) {
-            console.error('File reading error:', error);
-            return false;
-        }
-
-        // Parse and load based on file type
-        let parsedData;
-
-        if (fileName.endsWith('.csv')) {
-            // Parse CSV using Luckysheet's CSV parser
-            parsedData = luckysheet.transformFileToCsv(fileContent);
-        } else {
-            // Parse Excel using Luckysheet's Excel parser
-            parsedData = luckysheet.transformFileToSheet(fileContent);
-        }
-
-        // Load the parsed data into Luckysheet
-        if (parsedData) {
-            return await this.loadData(parsedData);
-        } else {
-            console.error('Failed to parse file');
+            console.error('[SPREADSHEET] Import failed:', error);
             return false;
         }
     }
 
     /**
-     * Export to Excel
-     * Create Excel file
+     * Export to Excel (.xlsx) - every workbook sheet becomes a file sheet
      * @param {string} filename - Output filename
      * @returns {Promise<boolean>} Success status
      */
     async exportToExcel(filename) {
-        // Check if spreadsheet is initialized
-        if (!this.isInitialized) {
-            console.error('Spreadsheet not initialized');
+        if (!window.XLSX) {
+            console.error('[SPREADSHEET] SheetJS not available for export');
             return false;
         }
-
-        // Get current sheet data
-        const sheetData = this.getData();
-        if (!sheetData) {
-            console.error('Failed to get sheet data');
-            return false;
-        }
-
-        // Generate default filename if not provided
-        const defaultFilename = `spreadsheet_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        const outputFilename = filename || defaultFilename;
+        if (!this.ready()) return false;
 
         try {
-            // Export to Excel blob
-            const excelBlob = luckysheet.exportXlsx(sheetData);
+            const snapshot = this.getData();
+            const book = XLSX.utils.book_new();
 
-            // Create download link
-            const link = document.createElement('a');
-            const downloadUrl = URL.createObjectURL(excelBlob);
-            link.href = downloadUrl;
-            link.download = outputFilename.endsWith('.xlsx') ? outputFilename : `${outputFilename}.xlsx`;
+            snapshot.sheetOrder.forEach(sheetId => {
+                const sheetSnap = snapshot.sheets[sheetId];
+                if (!sheetSnap) return;
 
-            // Trigger download
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+                const aoa = [];
 
-            // Clean up
-            URL.revokeObjectURL(downloadUrl);
+                const cellData = sheetSnap.cellData || {};
+                Object.keys(cellData).forEach(rStr => {
+                    const r = parseInt(rStr, 10);
+                    if (!aoa[r]) aoa[r] = [];
+                    Object.keys(cellData[r]).forEach(cStr => {
+                        const c = parseInt(cStr, 10);
+                        const cell = cellData[r][cStr];
+                        if (!cell) return;
+                        if (cell.f) {
+                            // Preserve formulas in the exported file
+                            aoa[r][c] = { f: cell.f };
+                        } else if (cell.v !== undefined && cell.v !== null) {
+                            aoa[r][c] = cell.v;
+                        }
+                    });
+                });
 
+                const denseAoa = [];
+                for (let i = 0; i < aoa.length; i++) denseAoa.push(aoa[i] || []);
+                if (denseAoa.length === 0) denseAoa.push([]);
+
+                const sheet = XLSX.utils.aoa_to_sheet(denseAoa);
+                XLSX.utils.book_append_sheet(book, sheet, sheetSnap.name || `Sheet${snapshot.sheetOrder.indexOf(sheetId) + 1}`);
+            });
+
+            const outputFilename = (filename || `spreadsheet_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            XLSX.writeFile(book, outputFilename.endsWith('.xlsx') ? outputFilename : `${outputFilename}.xlsx`);
             return true;
         } catch (error) {
-            console.error('Export to Excel failed:', error);
+            console.error('[SPREADSHEET] Export to Excel failed:', error);
             return false;
         }
     }
 
     /**
-     * Export to CSV
-     * Create CSV file
+     * Export the active sheet to CSV
      * @param {string} filename - Output filename
      * @returns {Promise<boolean>} Success status
      */
     async exportToCSV(filename) {
-        // Check if spreadsheet is initialized
-        if (!this.isInitialized) {
-            console.error('Spreadsheet not initialized');
+        if (!window.XLSX) {
+            console.error('[SPREADSHEET] SheetJS not available for export');
             return false;
         }
-
-        // Get current sheet data (CSV only supports single sheet)
-        const sheetData = this.getCurrentSheetData();
-        if (!sheetData) {
-            console.error('Failed to get current sheet data');
-            return false;
-        }
-
-        // Generate default filename if not provided
-        const defaultFilename = `sheet_${new Date().toISOString().slice(0, 10)}.csv`;
-        const outputFilename = filename || defaultFilename;
+        if (!this.ready()) return false;
 
         try {
-            // Export to CSV string
-            const csvContent = luckysheet.exportCsv(sheetData);
+            const snapshot = this.getData();
+            const ws = this.getCurrentSheetData();
+            const sheetId = ws.getSheetId();
+            const sheetSnap = snapshot.sheets[sheetId];
+            if (!sheetSnap) return false;
 
-            // Create blob with correct MIME type
-            const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            // Convert cellData to an array-of-arrays for SheetJS
+            const aoa = [];
+            const cellData = sheetSnap.cellData || {};
+            Object.keys(cellData).forEach(rStr => {
+                const r = parseInt(rStr, 10);
+                if (!aoa[r]) aoa[r] = [];
+                Object.keys(cellData[r]).forEach(cStr => {
+                    const c = parseInt(cStr, 10);
+                    const cell = cellData[r][cStr];
+                    if (!cell) return;
+                    aoa[r][c] = cell.f ? `=${cell.f}` : (cell.v ?? '');
+                });
+            });
 
-            // Create download link
+            const denseAoa = [];
+            for (let i = 0; i < aoa.length; i++) denseAoa.push(aoa[i] || []);
+            if (denseAoa.length === 0) denseAoa.push([]);
+
+            const sheet = XLSX.utils.aoa_to_sheet(denseAoa);
+            const csvContent = XLSX.utils.sheet_to_csv(sheet);
+
+            const outputFilename = (filename || `sheet_${new Date().toISOString().slice(0, 10)}.csv`);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
             const link = document.createElement('a');
-            const downloadUrl = URL.createObjectURL(csvBlob);
+            const downloadUrl = URL.createObjectURL(blob);
             link.href = downloadUrl;
             link.download = outputFilename.endsWith('.csv') ? outputFilename : `${outputFilename}.csv`;
 
-            // Trigger download
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-
-            // Clean up
             URL.revokeObjectURL(downloadUrl);
 
             return true;
         } catch (error) {
-            console.error('Export to CSV failed:', error);
+            console.error('[SPREADSHEET] Export to CSV failed:', error);
             return false;
         }
     }
@@ -708,20 +911,18 @@ class SpreadsheetManager {
 
     /**
      * Undo last action
-     * Revert last change
      */
     undo() {
-        // Use Luckysheet undo functionality
-        luckysheet.undo();
+        if (!this.univerAPI) return;
+        this.univerAPI.undo();
     }
 
     /**
      * Redo last undone action
-     * Restore undone change
      */
     redo() {
-        // Use Luckysheet redo functionality
-        luckysheet.redo();
+        if (!this.univerAPI) return;
+        this.univerAPI.redo();
     }
 
     // ================================================
@@ -729,50 +930,46 @@ class SpreadsheetManager {
     // ================================================
 
     /**
-     * Freeze rows
-     * Freeze specified number of rows
+     * Freeze the first N rows
      * @param {number} count - Number of rows to freeze
      */
     freezeRows(count) {
-        // Use Luckysheet freeze API
-        if (count <= 0){
-            console.error('Count cannot be zero or negative');
+        if (!this.ready() || count <= 0) {
+            console.error('[SPREADSHEET] Invalid freeze row count');
             return;
         }
-        luckysheet.frozenRowsOnly(count);
+        this.getCurrentSheetData().setFrozenRows(count);
     }
 
     /**
-     * Freeze columns
-     * Freeze specified number of columns
+     * Freeze the first N columns
      * @param {number} count - Number of columns to freeze
      */
     freezeColumns(count) {
-        // Use Luckysheet freeze API
-        if (count <= 0){
-            console.error('Count cannot be zero or negative');
+        if (!this.ready() || count <= 0) {
+            console.error('[SPREADSHEET] Invalid freeze column count');
             return;
         }
-        luckysheet.frozenColumnOnly(count);
+        this.getCurrentSheetData().setFrozenColumns(count);
     }
 
     /**
-     * Freeze both rows and columns
-     * Freeze at intersection point
+     * Freeze rows and columns together
      * @param {object} options - {rows: number, cols: number}
      */
     freeze(options) {
-        // Freeze rows and columns
-        luckysheet.frozenBothRowColumn(options.rows, options.cols);
+        if (!this.ready()) return;
+        const ws = this.getCurrentSheetData();
+        if (options.rows > 0) ws.setFrozenRows(options.rows);
+        if (options.cols > 0) ws.setFrozenColumns(options.cols);
     }
 
     /**
-     * Unfreeze all
      * Remove all freezing
      */
     unfreeze() {
-        // Clear freeze settings
-        luckysheet.frozenCancel();
+        if (!this.ready()) return;
+        this.getCurrentSheetData().cancelFreeze();
     }
 
     // ================================================
@@ -780,44 +977,69 @@ class SpreadsheetManager {
     // ================================================
 
     /**
-     * Validate data structure
-     * Check if data is valid for Luckysheet
-     * @param {object} data - Data to validate
-     * @returns {boolean} Valid or not
+     * True when Univer and a workbook are ready
+     * @returns {boolean}
      */
-    validateData(data) {
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            console.error('[SPREADSHEET] Data is not a valid array');
-            return false;
-        }
-
-        for (let sheet of data){
-            if (!sheet.name || typeof sheet.name  !== 'string') {
-                console.error('[SPREADSHEET] Sheet missing name or invalid:', sheet);
-                return false;
-            }
-            if (sheet.celldata !== undefined && !Array.isArray(sheet.celldata)) {
-                console.error('[SPREADSHEET] Sheet celldata is not an array:', sheet);
-                return false;
-            }
-        }
-
-        return true;
+    ready() {
+        return this.isInitialized && !!this.fWorkbook && !!this.univerAPI;
     }
 
     /**
-     * Generate unique sheet name
-     * Create unique sheet name
+     * Resolve an A1-notation string to an FRange on the active sheet
+     * @param {string} ref - 'A1' or 'A1:B2'
+     * @returns {object|null} FRange
+     */
+    resolveRangeRef(ref) {
+        try {
+            return this.getCurrentSheetData().getRange(ref);
+        } catch (error) {
+            console.error('[SPREADSHEET] Invalid range reference:', ref, error);
+            return null;
+        }
+    }
+
+    /**
+     * Validate data structure
+     * @param {object} data - Snapshot or legacy payload
+     * @returns {boolean}
+     */
+    validateData(data) {
+        if (Array.isArray(data)) return false;             // legacy
+        return !!(data && typeof data === 'object' && data.sheets);
+    }
+
+    /**
+     * Find a unique sheet name avoiding collisions
+     * @param {string} preferred - Desired name
+     * @returns {string} Unique name
+     */
+    uniqueSheetName(preferred) {
+        if (!this.univerAPI || !this.fWorkbook) return preferred || 'Sheet1';
+
+        const taken = new Set(this.fWorkbook.getSheets().map(s => s.getSheetName()));
+        if (!taken.has(preferred)) return preferred;
+
+        let counter = 1;
+        let candidate = `${preferred}${counter}`;
+        while (taken.has(candidate)) {
+            counter++;
+            candidate = `${preferred}${counter}`;
+        }
+        return candidate;
+    }
+
+    /**
+     * Generate unique sheet name ("Sheet2", "Sheet3", ...)
      * @param {string} baseName - Base name for sheet
      * @returns {string} Unique sheet name
      */
     generateSheetName(baseName = 'Sheet') {
-        // Generate name like "Sheet1", "Sheet2", etc.
-        const allSheets = luckysheet.getAllSheets();
-        const existingNames = allSheets.map(sheet => sheet.name);
+        if (!this.fWorkbook) return `${baseName}1`;
+
+        const existingNames = this.fWorkbook.getSheets().map(sheet => sheet.getSheetName());
         let counter = 1;
         let newName = baseName + counter;
-        while (existingNames.includes(newName)){
+        while (existingNames.includes(newName)) {
             counter++;
             newName = baseName + counter;
         }
@@ -826,26 +1048,23 @@ class SpreadsheetManager {
 
     /**
      * Convert cell reference to index
-     * Parse "A1" to {row: 0, col: 0}
+     * Parse "A1" to {row: 0, column: 0}
      * @param {string} cell - Cell reference
      * @returns {object} Row and column indices
      */
     cellToIndex(cell) {
-        // Parse cell reference
         const match = cell.match(/^([A-Z]+)(\d+)$/);
         if (!match) {
-            console.error('Invalid cell reference:', cell);
+            console.error('[SPREADSHEET] Invalid cell reference:', cell);
             return null;
         }
-        const row = match[2];
         const column = match[1];
         let colIndex = 0;
-        for(let i=0; i<column.length; i++){
+        for (let i = 0; i < column.length; i++) {
             colIndex = colIndex * 26 + (column.charCodeAt(i) - 64);
         }
-        colIndex--; //Subtracting 1 from colIndex to make it 0-based
-        let rowIndex = parseInt(row) - 1;
-        return {row: rowIndex, column: colIndex};
+        colIndex--; // zero-based
+        return { row: parseInt(match[2], 10) - 1, column: colIndex };
     }
 
     /**
@@ -855,24 +1074,20 @@ class SpreadsheetManager {
      * @returns {string} Cell reference
      */
     indexToCell(index) {
-        // Generate cell reference
         const rowIndex = index.row + 1;
-        const colIndex = index.column;
-
+        let col = index.column + 1;
         let column = '';
-        let col = colIndex + 1; // Convert to 1-based first
-        while (col > 0){
-            col--; // Adjust because there's no zero in this system
+        while (col > 0) {
+            col--;
             const remainder = col % 26;
             column = String.fromCharCode(65 + remainder) + column;
-            col = Math.floor(col/26);
+            col = Math.floor(col / 26);
         }
         return column + rowIndex;
     }
 
     /**
      * Show loading state
-     * Display loading overlay
      */
     showLoading() {
         const loadingOverlay = document.getElementById('loadingOverlay');
@@ -886,7 +1101,6 @@ class SpreadsheetManager {
 
     /**
      * Hide loading state
-     * Hide loading overlay
      */
     hideLoading() {
         const loadingOverlay = document.getElementById('loadingOverlay');
@@ -900,31 +1114,27 @@ class SpreadsheetManager {
 
     /**
      * Destroy spreadsheet
-     * Clean up Luckysheet instance
+     * Tear down Univer instance and references
      */
     destroy() {
-        // Call luckysheet.destroy()
-        // Clear references
-        luckysheet.destroy();
+        this.disposeCurrentWorkbook();
         this.isInitialized = false;
         this.container = null;
         this.data = null;
     }
 
     /**
-     * Get current spreadsheet data
-     * @returns {object|null} Current spreadsheet data
+     * Get current spreadsheet record from storage
+     * @returns {Promise<object|null>}
      */
     async getCurrentSpreadsheetData() {
         try {
             if (!this.currentSheetId) return null;
 
-            // Load from storage
             const userData = await gridsStorage.loadUserData();
             if (!userData || !userData.spreadsheets) return null;
 
-            const spreadsheet = userData.spreadsheets.find(s => s.id === this.currentSheetId);
-            return spreadsheet || null;
+            return userData.spreadsheets.find(s => s.id === this.currentSheetId) || null;
         } catch (error) {
             console.error('[SPREADSHEET] Error getting spreadsheet data:', error);
             return null;
@@ -940,26 +1150,23 @@ class SpreadsheetManager {
         try {
             if (!metadata.id) return false;
 
-            // Load current user data
             const userData = await gridsStorage.loadUserData();
             if (!userData || !userData.spreadsheets) return false;
 
-            // Find and update the spreadsheet
             const index = userData.spreadsheets.findIndex(s => s.id === metadata.id);
             if (index === -1) return false;
 
-            // Update metadata while preserving the spreadsheet data
+            // Preserve the existing spreadsheet body, refresh metadata
             const updatedSpreadsheet = {
                 ...userData.spreadsheets[index],
                 name: metadata.name,
                 updatedAt: metadata.updatedAt
             };
 
-            // Save to storage using the existing saveSpreadsheet method
             const success = await gridsStorage.saveSpreadsheet(metadata.id, updatedSpreadsheet);
 
             if (success) {
-                this.currentSpreadsheetMetadata = metadata;
+                this.currentSpreadsheetMetadata = updatedSpreadsheet;
             }
 
             return success;
@@ -971,8 +1178,7 @@ class SpreadsheetManager {
 
     /**
      * Update shared copy asynchronously (non-blocking)
-     * This allows the main save to complete quickly while shared copy updates in background
-     * @param {object} spreadsheetData - Complete spreadsheet data to update shared copy with
+     * @param {object} spreadsheetData - Complete spreadsheet data to push
      */
     async updateSharedCopy(spreadsheetData) {
         if (!spreadsheetData.sharedId) {
@@ -1010,5 +1216,10 @@ class SpreadsheetManager {
 // ================================================
 
 // Initialize global spreadsheet manager instance
-// Create spreadsheet manager instance when DOM is ready
 const spreadsheetManager = new SpreadsheetManager();
+
+// Explicitly expose on window: top-level const declarations don't
+// become window properties, and themes.js relies on detecting it there
+if (typeof window !== 'undefined') {
+    window.spreadsheetManager = spreadsheetManager;
+}

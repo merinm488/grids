@@ -549,18 +549,40 @@ class GridsHome {
             // Generate unique ID
             const id = `${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 11)}`;
 
-            // Create default spreadsheet data - Luckysheet expects array of sheets
+            // Create default spreadsheet data - Univer workbook snapshot
+            const sheetId = `sheet-${Date.now().toString(36)}`;
             const newSpreadsheet = {
                 id: id,
                 name: 'Untitled Spreadsheet',
-                data: [{
-                    name: 'Sheet1',
-                    row: 84,
-                    column: 60,
-                    celldata: [],
-                    luckysheet_select_save: [{ row: [0, 1], column: [0, 1] }],
-                    luckysheet_selection_range: []
-                }],
+                formatVersion: 2,
+                data: {
+                    id: `wb_${id}`,
+                    name: 'Untitled Spreadsheet',
+                    appVersion: '0.25.1',
+                    locale: 'enUS',
+                    styles: {},
+                    sheetOrder: [sheetId],
+                    sheets: {
+                        [sheetId]: {
+                            id: sheetId,
+                            name: 'Sheet1',
+                            tabColor: '',
+                            hidden: 0,
+                            freeze: { xOffset: 0, yOffset: 0, startRow: -1, startColumn: -1, xSplit: 0, ySplit: 0 },
+                            rowCount: 84,
+                            columnCount: 60,
+                            zoomRatio: 1,
+                            scrollTop: 0,
+                            scrollLeft: 0,
+                            defaultColumnWidth: 73,
+                            defaultRowHeight: 19,
+                            mergeData: [],
+                            cellData: {},
+                            rowData: {},
+                            columnData: {}
+                        }
+                    }
+                },
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };

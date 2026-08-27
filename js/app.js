@@ -62,20 +62,29 @@ class GridsApp {
                 this.setupAutoSave();
             }
 
-            // Check if Luckysheet is available
-            if (typeof luckysheet === 'undefined') {
-                console.error('[APP] Luckysheet not loaded');
+            // Check if Univer is available
+            if (typeof UniverPresets === 'undefined') {
+                console.error('[APP] Univer not loaded');
                 this.showError('Spreadsheet library failed to load. Please refresh the page.');
                 return false;
             }
 
             // Initialize spreadsheet
-            if (this.spreadsheetId && await this.load(this.spreadsheetId)) {
+            let loadOutcome = false;
+            if (this.spreadsheetId) {
+                loadOutcome = await this.load(this.spreadsheetId);
+            }
+
+            if (loadOutcome) {
                 // Successfully loaded existing spreadsheet
                 const metadata = spreadsheetManager.getMetadata();
                 this.updateSpreadsheetTitle(metadata?.name);
-                // Set up Luckysheet change hooks for auto-save
+                // Set up Univer change hooks for auto-save
                 this.setupLuckysheetHooks();
+            } else if (spreadsheetManager && spreadsheetManager.isLegacyBlocked && spreadsheetManager.isLegacyBlocked()) {
+                // Legacy Luckysheet file - notice is already shown, nothing else to do
+                this.updateSpreadsheetTitle(spreadsheetManager.getMetadata()?.name);
+                console.warn('[APP] Legacy spreadsheet opened - editor disabled for this file');
             } else {
                 // Create new spreadsheet
                 const newId = await this.createNew();
@@ -309,8 +318,7 @@ class GridsApp {
      * Handle window resize
      */
     handleResize() {
-        // Luckysheet handles resize automatically
-        // Add any custom resize logic here if needed
+        // Univer handles resize automatically via its own listeners
         this.updateThemeIndicator();
     }
 
@@ -468,8 +476,8 @@ class GridsApp {
             const defaultData = spreadsheetManager.createDefaultData();
 
             // Initialize spreadsheet with default data
-            const success = await spreadsheetManager.initialize(defaultData);
-            if (!success) {
+            const result = await spreadsheetManager.initialize(defaultData);
+            if (!result.ok) {
                 throw new Error('Failed to initialize spreadsheet');
             }
 
@@ -561,90 +569,12 @@ class GridsApp {
     }
 
     /**
-     * Setup Luckysheet event hooks for auto-save
-     * Track changes to enable auto-save functionality
+     * Set up change tracking for auto-save via Univer's command stream
      */
     setupLuckysheetHooks() {
-        if (!luckysheet || !luckysheet.hook) {
-            console.warn('[APP] Luckysheet hooks not available, auto-save may not work properly');
-            return;
-        }
-
-        // Hook into various Luckysheet events to track changes
-        luckysheet.hook.cellEditBefore = function (range) {
-            // Cell edit about to happen
-        };
-
-        luckysheet.hook.cellEditAfter = function (range) {
-            // Mark as changed when cells are edited
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.cellMerged = function (range) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.cellAllEditBefore = function (range) {
-            // All cells edit about to happen
-        };
-
-        luckysheet.hook.cellFormatBefore = function (range) {
-            // Format change about to happen
-        };
-
-        luckysheet.hook.cellFormatAfter = function (range) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.rowColChange = function (type, rowIndex, colIndex, oldValue, newValue) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.scroll = function (scrollLeft, scrollTop) {
-            // Don't mark as changed on scroll
-        };
-
-        luckysheet.hook.selectionChange = function (range) {
-            // Don't mark as changed on selection change only
-        };
-
-        luckysheet.hook.rangeEditAfter = function (range) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.rangeClear = function (range) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.sheetAdd = function (sheetObject) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.sheetDelete = function (sheetObject) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
-
-        luckysheet.hook.sheetRename = function (sheetObject) {
-            if (window.gridsApp) {
-                window.gridsApp.markAsChanged();
-            }
-        };
+        spreadsheetManager.startChangeTracking(() => {
+            this.markAsChanged();
+        });
     }
 
     /**
@@ -1280,16 +1210,16 @@ class GridsApp {
  */
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Wait for Luckysheet to be available (CDN loading)
+        // Wait for Univer to be available (CDN loading)
         let attempts = 0;
         const maxAttempts = 100; // 10 seconds timeout (more realistic for CDN)
-        while (typeof luckysheet === 'undefined' && attempts < maxAttempts) {
+        while (typeof UniverPresets === 'undefined' && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
         }
 
-        if (typeof luckysheet === 'undefined') {
-            console.error('[APP] Luckysheet failed to load from CDN');
+        if (typeof UniverPresets === 'undefined') {
+            console.error('[APP] Univer failed to load from CDN');
             document.body.innerHTML = `
                 <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
                     <h2>Failed to load spreadsheet library</h2>
