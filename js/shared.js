@@ -80,7 +80,9 @@ class SharedSpreadsheet {
     }
 
     /**
-     * Initialize Univer in read-only mode
+     * Initialize Univer in view mode.
+     * Viewers can filter and sort interactively (viewer-side only),
+     * but data entry / cell edits stay blocked.
      */
     async initializeSpreadsheet() {
         try {
@@ -101,10 +103,26 @@ class SharedSpreadsheet {
             const { LocaleType, mergeLocales } = UniverCore;
             const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
 
+            // Optional presets load when their scripts are present
+            const presets = [UniverSheetsCorePreset({ container: 'univer' })];
+            const locales = [UniverPresetSheetsCoreEnUS];
+
+            if (typeof UniverPresetSheetsFilter !== 'undefined' &&
+                typeof UniverPresetSheetsFilterEnUS !== 'undefined') {
+                presets.push(UniverPresetSheetsFilter.UniverSheetsFilterPreset());
+                locales.push(UniverPresetSheetsFilterEnUS);
+            }
+
+            if (typeof UniverPresetSheetsSort !== 'undefined' &&
+                typeof UniverPresetSheetsSortEnUS !== 'undefined') {
+                presets.push(UniverPresetSheetsSort.UniverSheetsSortPreset());
+                locales.push(UniverPresetSheetsSortEnUS);
+            }
+
             const { univerAPI } = createUniver({
                 locale: LocaleType.EN_US,
-                locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
-                presets: [UniverSheetsCorePreset({ container: 'univer' })],
+                locales: { [LocaleType.EN_US]: mergeLocales(...locales) },
+                presets,
             });
 
             const fWorkbook = univerAPI.createWorkbook({
@@ -112,8 +130,11 @@ class SharedSpreadsheet {
                 name: this.spreadsheetData.name || body.name || 'Untitled Spreadsheet',
             });
 
-            // View-only mode: block all editing commands
+            // Data entry stays blocked, but filter/sort interactions
+            // remain available for the viewer (viewer-side only)
             fWorkbook.setEditable(false);
+            this.univerAPI = univerAPI;
+            this.fWorkbook = fWorkbook;
 
             this.isLoaded = true;
             this.hideLoading();
