@@ -105,12 +105,34 @@ class SpreadsheetManager {
         const { LocaleType, mergeLocales } = UniverCore;
         const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
 
+        // Filter/sort are optional add-ons - degrade gracefully if their
+        // scripts failed to load (e.g. stale cached HTML without the
+        // script tags, or a CDN hiccup) so the core editor still works
+        const presets = [UniverSheetsCorePreset({
+            container: APP_CONFIG.spreadsheet.container,
+        })];
+        const locales = [UniverPresetSheetsCoreEnUS];
+
+        if (typeof UniverPresetSheetsFilter !== 'undefined' &&
+            typeof UniverPresetSheetsFilterEnUS !== 'undefined') {
+            presets.push(UniverPresetSheetsFilter.UniverSheetsFilterPreset());
+            locales.push(UniverPresetSheetsFilterEnUS);
+        } else {
+            console.warn('[SPREADSHEET] Filter preset not loaded - filter unavailable');
+        }
+
+        if (typeof UniverPresetSheetsSort !== 'undefined' &&
+            typeof UniverPresetSheetsSortEnUS !== 'undefined') {
+            presets.push(UniverPresetSheetsSort.UniverSheetsSortPreset());
+            locales.push(UniverPresetSheetsSortEnUS);
+        } else {
+            console.warn('[SPREADSHEET] Sort preset not loaded - sort unavailable');
+        }
+
         const { univerAPI } = createUniver({
             locale: LocaleType.EN_US,
-            locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
-            presets: [UniverSheetsCorePreset({
-                container: APP_CONFIG.spreadsheet.container,
-            })],
+            locales: { [LocaleType.EN_US]: mergeLocales(...locales) },
+            presets,
         });
 
         this.univerAPI = univerAPI;
